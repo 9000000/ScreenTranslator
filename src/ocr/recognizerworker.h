@@ -4,7 +4,7 @@
 
 #include <QObject>
 
-class Tesseract;
+#include "tesseract.h"
 
 class RecognizeWorker : public QObject
 {

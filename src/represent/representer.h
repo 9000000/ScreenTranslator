@@ -5,8 +5,8 @@
 #include <QObject>
 
 enum class ResultMode;
-class ResultWidget;
-class ResultEditor;
+#include "resulteditor.h"
+#include "resultwidget.h"
 
 class Representer : public QObject
 {

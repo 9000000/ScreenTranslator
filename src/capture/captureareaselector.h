@@ -2,6 +2,9 @@
 
 #include "stfwd.h"
 
+#include "capturearea.h"
+#include "captureareaeditor.h"
+
 #include <QWidget>
 
 class QMenu;

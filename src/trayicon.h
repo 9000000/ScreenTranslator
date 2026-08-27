@@ -3,6 +3,7 @@
 #include "stfwd.h"
 
 #include <QSystemTrayIcon>
+#include <QTimer>
 
 class QAction;
 

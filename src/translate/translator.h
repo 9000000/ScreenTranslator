@@ -8,7 +8,7 @@ class QWebEngineView;
 class QTabWidget;
 class QLineEdit;
 
-class WebPage;
+#include "webpage.h"
 
 class Translator : public QWidget
 {

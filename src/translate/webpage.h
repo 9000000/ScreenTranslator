@@ -5,7 +5,7 @@
 #include <QWebEngineCertificateError>
 #include <QWebEngineView>
 
-class WebPageProxy;
+#include "webpageproxy.h"
 
 class WebPage : public QWebEnginePage
 {

@@ -4,7 +4,7 @@
 
 #include <QObject>
 
-class HunspellCorrector;
+#include "hunspellcorrector.h"
 
 class CorrectorWorker : public QObject
 {

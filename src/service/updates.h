@@ -3,6 +3,7 @@
 #include <iterator>
 #include <QDate>
 #include <QStyledItemDelegate>
+#include <QTimer>
 #include <QUrl>
 #include <optional>
 
