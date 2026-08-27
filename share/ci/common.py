@@ -158,9 +158,34 @@ def recreate_dir(path):
     os.mkdir(path)
 
 
+def ensure_clean_windows_path():
+    if platform.system() != "Windows":
+        return
+    paths = os.environ.get('PATH', '').split(';')
+    cleaned_paths = [p for p in paths if p and not (
+        p.lower().endswith(r'\git\usr\bin') or 
+        p.lower().endswith(r'/git/usr/bin') or 
+        p.lower().endswith(r'\usr\bin') or 
+        p.lower().endswith(r'/usr/bin')
+    )]
+    cl_path = which('cl.exe') or which('cl')
+    if cl_path:
+        msvc_bin = os.path.dirname(os.path.abspath(cl_path))
+        if msvc_bin not in cleaned_paths:
+            cleaned_paths.insert(0, msvc_bin)
+    os.environ['PATH'] = ';'.join(cleaned_paths)
+
+
+ensure_clean_windows_path()
+
+
 def add_to_path(entry, prepend=True):
     path_separator = ';' if platform.system() == "Windows" else ':'
-    os.environ['PATH'] = entry + path_separator + os.environ['PATH']
+    if prepend:
+        os.environ['PATH'] = entry + path_separator + os.environ['PATH']
+    else:
+        os.environ['PATH'] = os.environ['PATH'] + path_separator + entry
+    ensure_clean_windows_path()
 
 
 def get_msvc_env_cmd(bitness='64', msvc_version=''):
@@ -168,6 +193,7 @@ def get_msvc_env_cmd(bitness='64', msvc_version=''):
     if platform.system() != "Windows":
         return None
 
+    ensure_clean_windows_path()
     if which('cl.exe') or which('cl'):
         print('>> cl.exe is already in PATH, skipping environment setup')
         return None

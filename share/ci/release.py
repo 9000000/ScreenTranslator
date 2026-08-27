@@ -41,3 +41,17 @@ if platform.system() == "Windows":
     r('windeploy.py')
 if platform.system() == "Darwin":
     r('macdeploy.py')
+
+github_env = os.environ.get('GITHUB_ENV')
+if github_env:
+    art_name = ''
+    if platform.system() == "Linux":
+        art_name = r_out('appimage.py', ['artifact_name'])
+    elif platform.system() == "Windows":
+        art_name = r_out('windeploy.py', ['artifact_name'])
+    elif platform.system() == "Darwin":
+        art_name = r_out('macdeploy.py', ['artifact_name'])
+
+    if art_name:
+        with open(github_env, 'a') as f:
+            f.write(f"artifact={art_name}\n")
