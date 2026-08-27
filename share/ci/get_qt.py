@@ -31,7 +31,7 @@ else:
     qt_dir_prefix = os.path.abspath('{}/gcc_64'.format(qt_version))
 
 # Run aqtinstall
-modules = ['qtwebengine', 'qt5compat']
+modules = ['qtwebengine', 'qt5compat', 'qtwebchannel', 'qtpositioning', 'qttools', 'qttranslations', 'qtdeclarative']
 cmd = [sys.executable, '-m', 'aqt', 'install-qt', host, 'desktop', qt_version, arch, '-m'] + modules
 c.print('>> Running: {}'.format(' '.join(cmd)))
 subprocess.run(cmd, check=True)
