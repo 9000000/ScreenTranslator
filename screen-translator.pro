@@ -13,9 +13,11 @@ INCLUDEPATH += $$DEPS_DIR/include
 LIBS += -L$$DEPS_DIR/lib
 LIBS += -lhunspell -lleptonica -ltesseract
 
+DEFINES += _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+
 win32{
   LIBS += -lUser32
-  QMAKE_CXXFLAGS += /FIiterator
+  QMAKE_CXXFLAGS += /FI\"$$PWD/src/msvc_compat.h\"
 }
 linux{
   lessThan(QT_MAJOR_VERSION, 6): QT += x11extras

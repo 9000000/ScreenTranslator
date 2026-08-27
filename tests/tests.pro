@@ -6,11 +6,13 @@ greaterThan(QT_MAJOR_VERSION, 5) {
     QT += core5compat
 }
 
+DEFINES += _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+
 win32 {
-    QMAKE_CXXFLAGS += /FIiterator
+    QMAKE_CXXFLAGS += /FI\"$$PWD/../src/msvc_compat.h\"
 }
 
-INCLUDEPATH += $$PWD/../external $$PWD/../src/service
+INCLUDEPATH += $$PWD/../external $$PWD/../src $$PWD/../src/service
 
 HEADERS += \
   ../src/service/updates.h
