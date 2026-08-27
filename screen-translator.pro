@@ -15,6 +15,7 @@ LIBS += -lhunspell -lleptonica -ltesseract
 
 win32{
   LIBS += -lUser32
+  QMAKE_CXXFLAGS += /FIiterator
 }
 linux{
   lessThan(QT_MAJOR_VERSION, 6): QT += x11extras

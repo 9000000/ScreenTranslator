@@ -6,6 +6,10 @@ greaterThan(QT_MAJOR_VERSION, 5) {
     QT += core5compat
 }
 
+win32 {
+    QMAKE_CXXFLAGS += /FIiterator
+}
+
 INCLUDEPATH += $$PWD/../external $$PWD/../src/service
 
 HEADERS += \

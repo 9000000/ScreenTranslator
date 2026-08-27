@@ -1,0 +1,28 @@
+Run python ./share/ci/release.py
+>> Setting up Qt 6.5.3 for linux
+>> Running: /opt/hostedtoolcache/Python/3.14.7/x64/bin/python -m aqt install-qt linux desktop 6.5.3 linux_gcc_64 -m qtwebengine qt5compat
+INFO    : aqtinstall(aqt) v3.3.0 on Python 3.14.7 [CPython GCC 11.4.0]
+ERROR   : The packages ['qt5compat', 'qt_base', 'qtwebengine'] were not found while parsing XML of package information!
+==============================Suggested follow-up:==============================
+* Please use 'aqt list-qt linux desktop --arch 6.5.3' to show architectures available.
+* Please use 'aqt list-qt linux desktop --modules 6.5.3 <arch>' to show modules available.
+Traceback (most recent call last):
+  File "/home/runner/work/ScreenTranslator/ScreenTranslator/./share/ci/get_qt.py", line 37, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.14.7/x64/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/opt/hostedtoolcache/Python/3.14.7/x64/bin/python', '-m', 'aqt', 'install-qt', 'linux', 'desktop', '6.5.3', 'linux_gcc_64', '-m', 'qtwebengine', 'qt5compat']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "/home/runner/work/ScreenTranslator/ScreenTranslator/./share/ci/release.py", line 29, in <module>
+    r('get_qt.py')
+    ~^^^^^^^^^^^^^
+  File "/home/runner/work/ScreenTranslator/ScreenTranslator/./share/ci/release.py", line 26, in r
+    return subprocess.run([sys.executable, os.path.join(here, script)], check=True)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.14.7/x64/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/opt/hostedtoolcache/Python/3.14.7/x64/bin/python', '/home/runner/work/ScreenTranslator/ScreenTranslator/./share/ci/get_qt.py']' returned non-zero exit status 1.
+Error: Process completed with exit code 1.

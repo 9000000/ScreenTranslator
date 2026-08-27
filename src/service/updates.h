@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iterator>
 #include <QDate>
 #include <QStyledItemDelegate>
 #include <QUrl>

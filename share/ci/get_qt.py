@@ -15,7 +15,7 @@ except ImportError:
 
 if os_name == 'linux':
     host = 'linux'
-    arch = 'linux_gcc_64'
+    arch = 'gcc_64'
     qt_dir_prefix = os.path.abspath('{}/gcc_64'.format(qt_version))
 elif os_name == 'win64' or os_name == 'win32':
     host = 'windows'
@@ -27,7 +27,7 @@ elif os_name == 'macos':
     qt_dir_prefix = os.path.abspath('{}/clang_64'.format(qt_version))
 else:
     host = 'linux'
-    arch = 'linux_gcc_64'
+    arch = 'gcc_64'
     qt_dir_prefix = os.path.abspath('{}/gcc_64'.format(qt_version))
 
 # Run aqtinstall
