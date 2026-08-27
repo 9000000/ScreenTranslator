@@ -2,8 +2,9 @@
 
 #include <memory>
 
+#include <QStringList>
+
 class QString;
-class QStringList;
 
 class Manager;
 class Settings;
