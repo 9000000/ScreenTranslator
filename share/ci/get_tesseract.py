@@ -59,6 +59,14 @@ src_dir = os.path.abspath('tesseract_src')
 c.extract(archive, '.')
 c.symlink(c.get_archive_top_dir(archive), src_dir)
 
+import re
+with open('{}/CMakeLists.txt'.format(src_dir), 'r+') as f:
+    data = f.read()
+    data = re.sub(r'cmake_minimum_required\(VERSION\s+[0-9.]+\)', 'cmake_minimum_required(VERSION 3.10)', data)
+    f.seek(0, os.SEEK_SET)
+    f.truncate()
+    f.write(data)
+
 c.ensure_got_path(install_dir)
 
 c.recreate_dir(build_dir)
@@ -66,6 +74,7 @@ os.chdir(build_dir)
 
 cmake_args = '"{0}" \
 -DCMAKE_INSTALL_PREFIX="{1}" \
+-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
 -DLeptonica_DIR="{1}/cmake" \
 -DSW_BUILD=OFF \
 -DBUILD_TRAINING_TOOLS=OFF \

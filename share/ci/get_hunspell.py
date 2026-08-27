@@ -110,7 +110,7 @@ ${{CMAKE_CURRENT_BINARY_DIR}}/hunspell.pc @ONLY)\n'.format(src_dir.replace('\\',
     f.write('install(FILES ${CMAKE_CURRENT_BINARY_DIR}/hunspell.pc \
 DESTINATION lib/pkgconfig)\n')
 
-cmake_args = '"{}" -DCMAKE_INSTALL_PREFIX="{}" {}'.format(
+cmake_args = '"{}" -DCMAKE_INSTALL_PREFIX="{}" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 {}'.format(
     build_dir, install_dir, c.get_cmake_arch_args(bitness=bitness))
 
 if platform.system() == "Windows":

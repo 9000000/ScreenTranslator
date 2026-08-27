@@ -66,11 +66,15 @@ src_dir = os.path.abspath('leptonica_src')
 c.extract(archive, '.')
 c.symlink(c.get_archive_top_dir(archive), src_dir)
 
+import re
+
 with open('{}/CMakeLists.txt'.format(src_dir), 'r+') as f:
     data = f.read()
+    data = re.sub(r'cmake_minimum_required\(VERSION\s+[0-9.]+\)', 'cmake_minimum_required(VERSION 3.10)', data)
     data = data.replace('pkg_check_modules(WEBP', '#pkg_check_modules(WEBP')
     data = data.replace('if(NOT WEBP', 'if(FALSE')
     f.seek(0, os.SEEK_SET)
+    f.truncate()
     f.write(data)
 
 c.ensure_got_path(install_dir)
@@ -78,7 +82,7 @@ c.ensure_got_path(install_dir)
 c.recreate_dir(build_dir)
 os.chdir(build_dir)
 
-cmake_args = '"{}" -DCMAKE_INSTALL_PREFIX="{}" -DBUILD_SHARED_LIBS=ON \
+cmake_args = '"{}" -DCMAKE_INSTALL_PREFIX="{}" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_SHARED_LIBS=ON \
 -DSW_BUILD=OFF'.format(src_dir, install_dir,)
 
 if platform.system() == "Windows":
