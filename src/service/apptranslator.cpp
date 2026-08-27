@@ -41,10 +41,10 @@ void AppTranslator::retranslate()
 QStringList AppTranslator::searchPaths() const
 {
   return QStringList{
-      QLibraryInfo::location(QLibraryInfo::TranslationsPath),
+      QLibraryInfo::path(QLibraryInfo::TranslationsPath),
 #ifdef Q_OS_LINUX
       qgetenv("APPDIR") +
-          QLibraryInfo::location(QLibraryInfo::TranslationsPath),  // appimage
+          QLibraryInfo::path(QLibraryInfo::TranslationsPath),  // appimage
 #endif  // ifdef Q_OS_LINUX
       {},
       QLatin1String("translations"),
