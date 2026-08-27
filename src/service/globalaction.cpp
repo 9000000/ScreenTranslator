@@ -133,8 +133,13 @@ bool GlobalAction::unregisterHotKey(quint32 nativeKey, quint32 nativeMods)
   return !error;
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+bool GlobalAction::nativeEventFilter(const QByteArray &eventType, void *message,
+                                     qintptr *result)
+#else
 bool GlobalAction::nativeEventFilter(const QByteArray &eventType, void *message,
                                      long *result)
+#endif
 {
   Q_UNUSED(eventType);
   Q_UNUSED(result);
@@ -190,8 +195,13 @@ bool GlobalAction::unregisterHotKey(quint32 nativeKey, quint32 nativeMods)
   return UnregisterHotKey(0, nativeMods ^ nativeKey);
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+bool GlobalAction::nativeEventFilter(const QByteArray &eventType, void *message,
+                                     qintptr *result)
+#else
 bool GlobalAction::nativeEventFilter(const QByteArray &eventType, void *message,
                                      long *result)
+#endif
 {
   Q_UNUSED(eventType);
   Q_UNUSED(result);

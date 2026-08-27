@@ -63,7 +63,7 @@ void KeySequenceEdit::keyPressEvent(QKeyEvent *event)
     return;
   }
 
-  QKeySequence seq = event->modifiers() + event->key();
+  QKeySequence seq(int(event->modifiers()) | event->key());
   setKeySequence(seq, false);
   event->accept();
 }

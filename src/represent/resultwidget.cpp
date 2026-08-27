@@ -7,7 +7,6 @@
 
 #include <QApplication>
 #include <QBoxLayout>
-#include <QDesktopWidget>
 #include <QLabel>
 #include <QMenu>
 #include <QMouseEvent>

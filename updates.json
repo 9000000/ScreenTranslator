@@ -1,18 +1,8 @@
 {
   "version": 1,
   "app": {
-    "win32": {
-      "version": "4.0.0",
-      "host": "win32",
-      "files": [
-        {
-          "path": "$appdir$/screen-translator.exe",
-          "md5": "414c74c4594e0b90aff3cd86a73f96dd"
-        }
-      ]
-    },
     "win64": {
-      "version": "4.0.0",
+      "version": "4.1.0",
       "host": "win64",
       "files": [
         {
@@ -22,7 +12,7 @@
       ]
     },
     "linux": {
-      "version": "4.0.0",
+      "version": "4.1.0",
       "host": "linux",
       "files": [
         {

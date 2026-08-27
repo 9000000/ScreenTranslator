@@ -5,6 +5,7 @@
 #include <QString>
 
 class Hunspell;
+class QTextCodec;
 
 class HunspellCorrector
 {

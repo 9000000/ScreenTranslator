@@ -1,4 +1,7 @@
 QT = core gui widgets network webenginewidgets
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
 
 TARGET = screen-translator
 TEMPLATE = app
@@ -14,14 +17,14 @@ win32{
   LIBS += -lUser32
 }
 linux{
-  QT += x11extras
+  lessThan(QT_MAJOR_VERSION, 6): QT += x11extras
   LIBS += -lX11
 }
 
 SOURCES += $$PWD/external/miniz/miniz.c
 INCLUDEPATH += $$PWD/external
 
-isEmpty(VER): VER = 4.0.0
+isEmpty(VER): VER = 4.1.0
 DEFINES += VERSION="$$VER"
 VERSION = $$VER.0
 QMAKE_TARGET_COMPANY = Gres

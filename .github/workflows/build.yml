@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       custom_version:
-        description: 'Tên/số phiên bản tùy chỉnh (ví dụ: v4.0.1 hoặc 4.0.0-custom)'
+        description: 'Tên/số phiên bản tùy chỉnh (ví dụ: v4.1.1 hoặc 4.1.0-custom)'
         required: false
         default: ''
 
@@ -30,7 +30,6 @@ jobs:
       matrix:
         config:
           - { name: "win64", os: windows-latest, arch: "x64" }
-          - { name: "win32", os: windows-latest, arch: "x86" }
           - { name: "linux", os: ubuntu-22.04 }
           # - { name: "macos", os: macos-latest }
     steps:
@@ -44,6 +43,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pip aqtinstall
 
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'
@@ -98,7 +100,7 @@ jobs:
             TAG="${{ github.ref_name }}"
           else
             PRO_VER=$(grep -E 'VER\s*=' screen-translator.pro | sed -E 's/.*VER\s*=\s*//' | tr -d ' \r\n')
-            [ -z "$PRO_VER" ] && PRO_VER="4.0.0"
+            [ -z "$PRO_VER" ] && PRO_VER="4.1.0"
             TAG="v${PRO_VER}"
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
