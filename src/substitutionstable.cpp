@@ -109,18 +109,26 @@ void SubstitutionsTable::updateModel(const Substitutions &substitutions)
 {
   auto strings = sourceLanguages_->stringList();
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+  QSet<QString> uniqueStrings = QSet<QString>::fromList(strings);
+#else
+  QSet<QString> uniqueStrings(strings.begin(), strings.end());
+#endif
+
   if (!substitutions.empty()) {
     for (const auto &i : substitutions) {
       const auto name =
           LanguageCodes::name(LanguageCodes::idForTesseract(i.first));
 
-      if (!strings.contains(name))
+      if (!uniqueStrings.contains(name)) {
+        uniqueStrings.insert(name);
         strings.append(name);
+      }
     }
   }
 
   const auto any = LanguageCodes::name(LanguageCodes::anyLanguageId());
-  if (!strings.contains(any))
+  if (!uniqueStrings.contains(any))
     strings.append(any);
 
   std::sort(strings.begin(), strings.end());

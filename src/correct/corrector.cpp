@@ -115,24 +115,30 @@ QString Corrector::substituteUser(const QString &source,
   if (ranges.empty())
     return result;
 
-  while (true) {
-    auto bestMatch = ranges.front().first;
-    auto bestMatchLen = 0;
+  std::vector<It> subs;
+  for (const auto &range : ranges) {
+    for (auto it = range.first; it != range.second; ++it) {
+      subs.push_back(it);
+    }
+  }
 
-    for (const auto &range : ranges) {
-      for (auto it = range.first; it != range.second; ++it) {
-        const auto &sub = it->second;
-        if (!result.contains(sub.source))
-          continue;
-        const auto len = sub.source.length();
-        if (len > bestMatchLen) {
-          bestMatchLen = len;
-          bestMatch = it;
-        }
+  std::stable_sort(subs.begin(), subs.end(), [](const It &a, const It &b) {
+    return a->second.source.length() > b->second.source.length();
+  });
+
+  while (true) {
+    It bestMatch;
+    bool found = false;
+
+    for (const auto &it : subs) {
+      if (result.contains(it->second.source)) {
+        bestMatch = it;
+        found = true;
+        break;
       }
     }
 
-    if (bestMatchLen < 1)
+    if (!found)
       break;
 
     result.replace(bestMatch->second.source, bestMatch->second.target);

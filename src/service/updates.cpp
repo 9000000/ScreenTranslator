@@ -290,7 +290,32 @@ void Model::updateProgress(const QUrl &url, int progress)
 void Model::setExpansions(const QHash<QString, QString> &expansions)
 {
   expansions_ = expansions;
+  auto visitor = [](Component &component, auto v) -> void {
+    for (auto &file : component.files) {
+      file.state.reset();
+      file.expandedPath.clear();
+    }
+    for (auto &child : component.children) v(*child, v);
+  };
+  if (root_)
+    visitor(*root_, visitor);
   updateStates();
+}
+
+void Model::invalidate(const File &fileToInvalidate)
+{
+  if (!root_)
+    return;
+
+  auto visitor = [&fileToInvalidate](Component &component, auto v) -> void {
+    for (auto &file : component.files) {
+      if (file.rawPath == fileToInvalidate.rawPath) {
+        file.state.reset();
+      }
+    }
+    for (auto &child : component.children) v(*child, v);
+  };
+  visitor(*root_, visitor);
 }
 
 void Model::updateStates()
@@ -302,9 +327,11 @@ void Model::updateStates()
     if (!component.files.empty()) {
       component.state = State::Actual;
       for (auto &file : component.files) {
-        file.expandedPath = expanded(file.rawPath);
-        const auto fileState = currentState(file);
-        component.state = std::min(component.state, fileState);
+        if (file.expandedPath.isEmpty())
+          file.expandedPath = expanded(file.rawPath);
+        if (!file.state.has_value())
+          file.state = currentState(file);
+        component.state = std::min(component.state, file.state.value());
       }
       auto index = toIndex(component, int(Column::State));
       emit dataChanged(index, index, {Qt::DisplayRole});
@@ -620,8 +647,45 @@ void UpdateDelegate::paint(QPainter *painter,
 
 //
 
+Installer::Installer(const QStringList &allowedPaths)
+  : allowedPaths_(allowedPaths)
+{
+}
+
+bool Installer::isPathAllowed(const QString &path) const
+{
+  if (allowedPaths_.isEmpty())
+    return false;
+
+  const auto absolutePath = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+  const auto cs = Qt::CaseInsensitive;
+#else
+  const auto cs = Qt::CaseSensitive;
+#endif
+
+  for (const auto &allowedPath : allowedPaths_) {
+    auto cleanedAllowedPath =
+        QDir::cleanPath(QFileInfo(allowedPath).absoluteFilePath());
+    if (!cleanedAllowedPath.endsWith(QLatin1Char('/')))
+      cleanedAllowedPath += QLatin1Char('/');
+
+    if (absolutePath.compare(cleanedAllowedPath.chopped(1), cs) == 0 ||
+        absolutePath.startsWith(cleanedAllowedPath, cs))
+      return true;
+  }
+  return false;
+}
+
 void Installer::checkInstall(const File &file)
 {
+  if (!isPathAllowed(file.expandedPath)) {
+    error_ += QApplication::translate("Updates", "Path is not allowed\n%1")
+                  .arg(file.expandedPath);
+    return;
+  }
+
   QFileInfo installDir(QFileInfo(file.expandedPath).absolutePath());
   if (installDir.exists() && !installDir.isWritable()) {
     error_ +=
@@ -632,6 +696,12 @@ void Installer::checkInstall(const File &file)
 
 void Installer::remove(const File &file)
 {
+  if (!isPathAllowed(file.expandedPath)) {
+    error_ += QApplication::translate("Updates", "Path is not allowed\n%1")
+                  .arg(file.expandedPath);
+    return;
+  }
+
   QFile f(file.expandedPath);
   if (!f.exists())
     return;
@@ -645,6 +715,12 @@ void Installer::remove(const File &file)
 
 void Installer::install(const File &file, const QByteArray &data)
 {
+  if (!isPathAllowed(file.expandedPath)) {
+    error_ += QApplication::translate("Updates", "Path is not allowed\n%1")
+                  .arg(file.expandedPath);
+    return;
+  }
+
   auto installDir = QFileInfo(file.expandedPath).absoluteDir();
   if (!installDir.exists() && !installDir.mkpath(".")) {
     error_ += QApplication::translate("Updates", "Failed to create path\n%1")
@@ -699,8 +775,6 @@ AutoChecker::AutoChecker(Updater &updater, int intervalDays,
   , checkIntervalDays_(intervalDays)
   , lastCheckDate_(lastCheck)
 {
-  connect(&updater_, &Updater::checkedForUpdates,  //
-          this, &AutoChecker::updateLastCheckDate);
   scheduleNextCheck();
 }
 
@@ -711,34 +785,35 @@ const QDateTime &AutoChecker::lastCheckDate() const
   return lastCheckDate_;
 }
 
+void AutoChecker::updateLastCheckDate()
+{
+  lastCheckDate_ = QDateTime::currentDateTime();
+  scheduleNextCheck();
+}
+
 void AutoChecker::scheduleNextCheck()
 {
-  if (timer_)
-    timer_->stop();
-
-  if (checkIntervalDays_ < 1)
+  if (checkIntervalDays_ < 1) {
+    timer_.reset();
     return;
+  }
 
   if (!timer_) {
     timer_ = std::make_unique<QTimer>();
     timer_->setSingleShot(true);
     connect(timer_.get(), &QTimer::timeout,  //
-            &updater_, &Updater::checkForUpdates);
+            this, [this] {
+              updateLastCheckDate();
+              updater_.checkForUpdates();
+            });
   }
 
+  const auto nextCheckDate = lastCheckDate_.addDays(checkIntervalDays_);
   const auto now = QDateTime::currentDateTime();
-  const auto &last = lastCheckDate_.isValid() ? lastCheckDate_ : now;
-  auto nextTime = last.addDays(checkIntervalDays_);
-  if (nextTime <= now)
-    nextTime = now.addSecs(5);
-
-  timer_->start(now.msecsTo(nextTime));
-}
-
-void AutoChecker::updateLastCheckDate()
-{
-  lastCheckDate_ = QDateTime::currentDateTime();
-  scheduleNextCheck();
+  const auto timeoutSeconds =
+      now < nextCheckDate ? now.secsTo(nextCheckDate) : 0;
+  LTRACE() << "scheduled next update check after sec" << timeoutSeconds;
+  timer_->start(timeoutSeconds * 1000);
 }
 
 //
@@ -748,8 +823,8 @@ Updater::Updater(const QVector<QUrl> &updateUrls)
   , loader_(std::make_unique<Loader>(*this))
   , updateUrls_(updateUrls)
 {
-  std::random_device device;
-  std::mt19937 generator(device());
+  std::random_device rd;
+  std::mt19937 generator(rd());
   std::shuffle(updateUrls_.begin(), updateUrls_.end(), generator);
 }
 
@@ -774,6 +849,7 @@ void Updater::initView(QTreeView *view)
 
 void Updater::setExpansions(const QHash<QString, QString> &expansions)
 {
+  expansions_ = expansions;
   model_->setExpansions(expansions);
 }
 
@@ -788,12 +864,13 @@ void Updater::applyAction(Action action, const QVector<File> &files)
     LTRACE() << "applyAction" << int(action) << file.rawPath;
 
     if (action == Action::Remove) {
-      Installer installer;
+      Installer installer(expansions_.values());
       installer.remove(file);
       if (!installer.error().isEmpty()) {
         emit error(installer.error());
         continue;
       }
+      model_->invalidate(file);
       model_->updateStates();
       emit updated();
       continue;
@@ -803,7 +880,7 @@ void Updater::applyAction(Action action, const QVector<File> &files)
       if (file.urls.isEmpty() || findDownload(file.urls.first()) != -1)
         continue;
 
-      Installer installer;
+      Installer installer(expansions_.values());
       installer.checkInstall(file);
 
       if (!installer.error().isEmpty()) {
@@ -851,13 +928,14 @@ void Updater::downloaded(const QUrl &url, const QByteArray &data)
     return;
   }
 
-  Installer installer;
+  Installer installer(expansions_.values());
   installer.install(file, unpacked);
   if (!installer.error().isEmpty()) {
     emit error(installer.error());
     return;
   }
 
+  model_->invalidate(file);
   model_->updateStates();
   emit updated();
 }

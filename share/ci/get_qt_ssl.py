@@ -1,52 +1,29 @@
 import common as c
 from config import ssl_dir, os_name
 import sys
-import xml.etree.ElementTree as ET
+import os
 
 c.print('>> Downloading ssl for Qt for {}'.format(os_name))
 
 if os_name == 'linux':
-    os_url = 'linux_x64'
-    tool_name = 'tools_openssl_x64'
-    root_path = 'Tools/OpenSSL/binary'
-elif os_name == 'win32':
-    os_url = 'windows_x86'
-    tool_name = 'tools_openssl_x86'
-    root_path = 'Tools/OpenSSL/Win_x86'
-elif os_name == 'win64':
-    os_url = 'windows_x86'
-    tool_name = 'tools_openssl_x64'
-    root_path = 'Tools/OpenSSL/Win_x64'
+    os.makedirs('ssl/lib', exist_ok=True)
+    c.print('>> Linux build: skipped downloading openssl (relying on host system OpenSSL)')
+    sys.exit(0)
 elif os_name == 'macos':
-    exit(0)
+    sys.exit(0)
+elif os_name == 'win32':
+    url = 'https://wiki.overbyte.eu/arch/openssl-1.1.1w-win32.zip'
+    file_name = 'openssl-1.1.1w-win32.zip'
+elif os_name == 'win64':
+    url = 'https://wiki.overbyte.eu/arch/openssl-1.1.1w-win64.zip'
+    file_name = 'openssl-1.1.1w-win64.zip'
+else:
+    c.print('>> Unknown OS: {}'.format(os_name))
+    sys.exit(1)
 
-base_url = 'https://download.qt.io/online/qtsdkrepository/{}/desktop/{}' \
-    .format(os_url, tool_name)
-updates_file = 'Updates-{}-{}.xml'.format(tool_name, os_name)
-c.download(base_url + '/Updates.xml', updates_file)
-
-updates = ET.parse(updates_file)
-updates_root = updates.getroot()
-url = ''
-file_name = ''
-for i in updates_root.iter('PackageUpdate'):
-    name = i.find('Name').text
-    if not 'qt.tools.openssl' in name:
-        continue
-
-    archives = i.find('DownloadableArchives')
-    if archives.text is None:
-        continue
-
-    version = i.find('Version').text
-    url = base_url + '/' + name + '/' + version + archives.text
-    file_name = archives.text
-
-if len(url) == 0:
-    c.print('>> No ssl url found')
-    exit(1)
+# Download and extract the OpenSSL DLLs into ssl/bin
+dest_dir = os.path.join(ssl_dir, 'bin')
+os.makedirs(dest_dir, exist_ok=True)
 
 c.download(url, file_name)
-c.extract(file_name, '.')
-
-c.symlink(root_path, ssl_dir)
+c.extract(file_name, dest_dir)

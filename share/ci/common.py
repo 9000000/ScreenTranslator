@@ -130,9 +130,27 @@ def symlink(src, dest):
     norm_src = os.path.normcase(src)
     norm_dest = os.path.normcase(dest)
     if os.path.lexists(norm_dest):
-        os.remove(norm_dest)
-    os.symlink(norm_src, norm_dest,
-               target_is_directory=os.path.isdir(norm_src))
+        if os.path.isdir(norm_dest) and not os.path.islink(norm_dest):
+            try:
+                os.rmdir(norm_dest)
+            except OSError:
+                shutil.rmtree(norm_dest, ignore_errors=True)
+        else:
+            try:
+                os.remove(norm_dest)
+            except OSError:
+                shutil.rmtree(norm_dest, ignore_errors=True)
+    try:
+        os.symlink(norm_src, norm_dest,
+                   target_is_directory=os.path.isdir(norm_src))
+    except OSError as e:
+        if platform.system() == "Windows":
+            if os.path.isdir(norm_src):
+                sub.run('cmd /c mklink /j "{}" "{}"'.format(norm_dest, norm_src), check=True, shell=True)
+            else:
+                sub.run('cmd /c mklink /h "{}" "{}"'.format(norm_dest, norm_src), check=True, shell=True)
+        else:
+            raise e
 
 
 def recreate_dir(path):
@@ -150,7 +168,11 @@ def get_msvc_env_cmd(bitness='64', msvc_version=''):
     if platform.system() != "Windows":
         return None
 
-    env_script = msvc_version + '/VC/Auxiliary/Build/vcvars{}.bat'.format(bitness)
+    if which('cl.exe') or which('cl'):
+        print('>> cl.exe is already in PATH, skipping environment setup')
+        return None
+
+    env_script = os.path.normpath(msvc_version + '/VC/Auxiliary/Build/vcvars{}.bat'.format(bitness))
     return '"' + env_script + '"'
 
 
@@ -185,14 +207,27 @@ def ensure_got_path(path):
 
 def apply_cmd_env(cmd):
     """Run cmd and apply its modified environment"""
+    if not cmd:
+        return
     print('>> Applying env after', cmd)
     separator = 'env follows'
-    script = 'import os,sys;sys.stdout.buffer.write(str(dict(os.environ)).encode(\\\"utf-8\\\"))'
-    env = sub.run('{} && echo "{}" && python -c "{}"'.format(cmd, separator, script),
-                  shell=True, stdout=sub.PIPE, encoding='utf-8')
+    script = "import os,sys;sys.stdout.buffer.write(str(dict(os.environ)).encode('utf-8'))"
+    if platform.system() == "Windows":
+        cmd_line = f'cmd.exe /s /c "{cmd} && echo {separator} && python -c \"{script}\""'
+        env = sub.run(cmd_line, shell=False, stdout=sub.PIPE, stderr=sub.PIPE, encoding='utf-8')
+    else:
+        env = sub.run('{} && echo "{}" && python -c "{}"'.format(cmd, separator, script),
+                      shell=True, stdout=sub.PIPE, stderr=sub.PIPE, encoding='utf-8')
 
-    stringed = env.stdout[env.stdout.index(separator) + len(separator) + 1:]
-    parsed = ast.literal_eval(stringed)
+    try:
+        idx = env.stdout.index(separator)
+        stringed = env.stdout[idx + len(separator) + 1:]
+        parsed = ast.literal_eval(stringed)
+    except ValueError as e:
+        print("ERROR: Failed to apply environment after command:", cmd)
+        print("STDOUT:", env.stdout)
+        print("STDERR:", env.stderr)
+        raise e
 
     for key, value in parsed.items():
         if key in os.environ and os.environ[key] == value:

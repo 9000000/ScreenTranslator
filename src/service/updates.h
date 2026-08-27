@@ -3,6 +3,7 @@
 #include <QDate>
 #include <QStyledItemDelegate>
 #include <QUrl>
+#include <optional>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -22,6 +23,7 @@ struct File {
   QString md5;
   QDateTime versionDate;
   int progress{0};
+  std::optional<State> state;
 };
 
 class UpdateDelegate : public QStyledItemDelegate
@@ -43,6 +45,7 @@ public:
 
   QString parse(const QByteArray& data);
   void setExpansions(const QHash<QString, QString>& expansions);
+  void invalidate(const File& file);
   void updateStates();
   bool hasUpdates() const;
   void updateProgress(const QUrl& url, int progress);
@@ -105,13 +108,18 @@ private:
 class Installer
 {
 public:
+  explicit Installer(const QStringList& allowedPaths = {});
+
   void remove(const File& file);
   void install(const File& file, const QByteArray& data);
   void checkInstall(const File& file);
   const QString& error() const;
 
 private:
+  bool isPathAllowed(const QString& path) const;
+
   QString error_;
+  QStringList allowedPaths_;
 };
 
 class AutoChecker : public QObject
@@ -168,6 +176,7 @@ private:
   std::unique_ptr<AutoChecker> autoChecker_;
   QVector<QUrl> updateUrls_;
   QVector<File> downloading_;
+  QHash<QString, QString> expansions_;
 };
 
 }  // namespace update
