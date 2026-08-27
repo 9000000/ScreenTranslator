@@ -24,6 +24,18 @@ WebPage::WebPage(Translator &translator, const QString &script,
   connect(this, &WebPage::proxyAuthenticationRequired, this,
           &WebPage::authenticateProxy);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  connect(this, &QWebEnginePage::certificateError, this,
+          [this](QWebEngineCertificateError error) {
+            qDebug() << "certificateError" << error.url()
+                     << error.description();
+            if (ignoreSslErrors_)
+              error.acceptCertificate();
+            else
+              error.rejectCertificate();
+          });
+#endif
+
   scheduleWebchannelInitScript();
   scheduleTranslatorScript(script);
 
@@ -191,12 +203,14 @@ void WebPage::javaScriptConsoleMessage(
   emit log(QString("%1: %2 %3").arg(sourceID).arg(lineNumber).arg(message));
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 bool WebPage::certificateError(const QWebEngineCertificateError &error)
 {
   qDebug() << "certificateError" << error.url() << error.error()
            << error.errorDescription();
   return ignoreSslErrors_;
 }
+#endif
 
 void WebPage::authenticateProxy(const QUrl & /*requestUrl*/,
                                 QAuthenticator *authenticator,

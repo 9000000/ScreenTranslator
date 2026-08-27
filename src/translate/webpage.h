@@ -34,7 +34,9 @@ protected:
   void javaScriptConsoleMessage(JavaScriptConsoleMessageLevel level,
                                 const QString &message, int lineNumber,
                                 const QString &sourceID) override;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   bool certificateError(const QWebEngineCertificateError &error) override;
+#endif
 
 private:
   void authenticateProxy(const QUrl &requestUrl, QAuthenticator *authenticator,

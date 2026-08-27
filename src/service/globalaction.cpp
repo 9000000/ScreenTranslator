@@ -77,11 +77,35 @@ void GlobalAction::triggerHotKey(quint32 nativeKey, quint32 nativeMods)
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
 #include <xcb/xcb_event.h>
+#include <QGuiApplication>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
+#endif
 
 namespace service
 {
 static bool error = false;
+
+static Display *x11Display()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  if (auto *x11 = qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
+    return x11->display();
+  return nullptr;
+#else
+  return QX11Info::display();
+#endif
+}
+
+static Window x11AppRootWindow(Display *display)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  return display ? DefaultRootWindow(display) : 0;
+#else
+  Q_UNUSED(display);
+  return QX11Info::appRootWindow();
+#endif
+}
 
 static int customHandler(Display *display, XErrorEvent *event)
 {
@@ -101,8 +125,10 @@ static int customHandler(Display *display, XErrorEvent *event)
 
 bool GlobalAction::registerHotKey(quint32 nativeKey, quint32 nativeMods)
 {
-  Display *display = QX11Info::display();
-  Window window = QX11Info::appRootWindow();
+  Display *display = x11Display();
+  if (!display)
+    return false;
+  Window window = x11AppRootWindow(display);
   Bool owner = True;
   int pointer = GrabModeAsync;
   int keyboard = GrabModeAsync;
@@ -120,8 +146,10 @@ bool GlobalAction::registerHotKey(quint32 nativeKey, quint32 nativeMods)
 
 bool GlobalAction::unregisterHotKey(quint32 nativeKey, quint32 nativeMods)
 {
-  Display *display = QX11Info::display();
-  Window window = QX11Info::appRootWindow();
+  Display *display = x11Display();
+  if (!display)
+    return false;
+  Window window = x11AppRootWindow(display);
   error = false;
   int (*handler)(Display * display, XErrorEvent * event) =
       XSetErrorHandler(customHandler);
@@ -156,7 +184,9 @@ bool GlobalAction::nativeEventFilter(const QByteArray &eventType, void *message,
 
 quint32 GlobalAction::nativeKeycode(Qt::Key key)
 {
-  Display *display = QX11Info::display();
+  Display *display = x11Display();
+  if (!display)
+    return 0;
   KeySym keySym = XStringToKeysym(qPrintable(QKeySequence(key).toString()));
   if (XKeysymToString(keySym) == nullptr) {
     keySym = QChar(key).unicode();

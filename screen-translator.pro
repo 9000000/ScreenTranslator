@@ -20,7 +20,7 @@ win32{
   QMAKE_CXXFLAGS += /FI\"$$PWD/src/msvc_compat.h\"
 }
 linux{
-  lessThan(QT_MAJOR_VERSION, 6): QT += x11extras
+  equals(QT_MAJOR_VERSION, 5): QT += x11extras
   LIBS += -lX11
 }
 
