@@ -172,8 +172,33 @@ def get_msvc_env_cmd(bitness='64', msvc_version=''):
         print('>> cl.exe is already in PATH, skipping environment setup')
         return None
 
-    env_script = os.path.normpath(msvc_version + '/VC/Auxiliary/Build/vcvars{}.bat'.format(bitness))
-    return '"' + env_script + '"'
+    possible_paths = [
+        msvc_version,
+        r'C:\Program Files\Microsoft Visual Studio\2022\Enterprise',
+        r'C:\Program Files\Microsoft Visual Studio\2022\Community',
+        r'C:\Program Files\Microsoft Visual Studio\2022\Professional',
+        r'C:\Program Files\Microsoft Visual Studio\2022\BuildTools',
+        r'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise',
+        r'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community',
+        r'C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional',
+        r'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools',
+    ]
+
+    for p in possible_paths:
+        if not p or not os.path.exists(p):
+            continue
+        vcvars = os.path.normpath(os.path.join(p, 'VC', 'Auxiliary', 'Build', f'vcvars{bitness}.bat'))
+        if os.path.exists(vcvars):
+            print('>> Found MSVC environment script at:', vcvars)
+            return f'"{vcvars}"'
+        vcvarsall = os.path.normpath(os.path.join(p, 'VC', 'Auxiliary', 'Build', 'vcvarsall.bat'))
+        if os.path.exists(vcvarsall):
+            arch = 'x64' if bitness == '64' else 'x86'
+            print('>> Found MSVC vcvarsall script at:', vcvarsall)
+            return f'"{vcvarsall}" {arch}'
+
+    print('>> Warning: No Visual Studio environment script found.')
+    return None
 
 
 def get_cmake_arch_args(bitness='64'):

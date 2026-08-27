@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      custom_version:
+        description: 'Tên/số phiên bản tùy chỉnh (ví dụ: 3.3.1 hoặc 3.3.0-custom)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -14,13 +19,13 @@ jobs:
     runs-on: ${{ matrix.config.os }}
     env:
       OS: ${{ matrix.config.name }}
-      MSVC_VERSION: C:/Program Files/Microsoft Visual Studio/2022/Enterprise
+      VERSION: ${{ github.event.inputs.custom_version || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
     strategy:
       fail-fast: false
       matrix:
         config:
-          - { name: "win64", os: windows-latest }
-          - { name: "win32", os: windows-latest }
+          - { name: "win64", os: windows-latest, arch: "x64" }
+          - { name: "win32", os: windows-latest, arch: "x86" }
           - { name: "linux", os: ubuntu-22.04 }
           # - { name: "macos", os: macos-latest }
     steps:
@@ -34,6 +39,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.config.arch }}
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -61,10 +72,12 @@ jobs:
           name: ${{ env.artifact }}
           path: ./${{ env.artifact }}
 
-      - name: Publish Release Asset (on Tag)
-        if: startsWith(github.ref, 'refs/tags/') && env.artifact != ''
+      - name: Publish Release Asset (on Tag or Custom Dispatch)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event.inputs.custom_version != '') && env.artifact != ''
         uses: softprops/action-gh-release@v2
         with:
           files: ./${{ env.artifact }}
+          tag_name: ${{ github.event.inputs.custom_version || github.ref_name }}
+          name: ${{ github.event.inputs.custom_version || github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

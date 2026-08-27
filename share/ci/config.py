@@ -19,17 +19,24 @@ pro_file = path.abspath(path.dirname(__file__) +
 test_pro_file = path.abspath(path.dirname(__file__) +
                              '/../../tests/tests.pro')
 bin_name = 'screen-translator'
-app_version = 'testing'
-with open(pro_file, 'r') as f:
-    match = re.search(r'VER=(.*)', f.read())
-    if match:
-        app_version = match.group(1)
+
+custom_version = getenv('VERSION') or getenv('APP_VERSION')
+if custom_version:
+    app_version = custom_version.lstrip('v').strip()
+else:
+    app_version = '3.3.0'
+    if path.exists(pro_file):
+        with open(pro_file, 'r') as f:
+            match = re.search(r'VER\s*=\s*(.*)', f.read())
+            if match:
+                app_version = match.group(1).strip()
+
 ts_files_dir = path.abspath(path.dirname(__file__) + '/../../translations')
 
 os_name = getenv('OS', 'linux')
 app_version += {'linux': '', 'macos': '-experimental',
-                'win32': '', 'win64': ''}[os_name]
+                'win32': '', 'win64': ''}.get(os_name, '')
 bitness = '32' if os_name == 'win32' else '64'
-msvc_version = getenv('MSVC_VERSION', 'C:/Program Files (x86)/Microsoft Visual Studio/2019/Community')
+msvc_version = getenv('MSVC_VERSION', '')
 
 build_type = 'release' # 'debug'
