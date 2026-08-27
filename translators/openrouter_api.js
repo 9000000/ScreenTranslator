@@ -40,7 +40,7 @@ function translate(text, from, to) {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${API_KEY}`,
-            'HTTP-Referer': 'https://github.com/OneMoreGres/ScreenTranslator',
+            'HTTP-Referer': 'https://github.com/9000000/ScreenTranslator',
             'X-Title': 'ScreenTranslator'
         },
         body: JSON.stringify(requestBody)

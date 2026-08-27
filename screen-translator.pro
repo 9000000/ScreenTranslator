@@ -21,7 +21,7 @@ linux{
 SOURCES += $$PWD/external/miniz/miniz.c
 INCLUDEPATH += $$PWD/external
 
-isEmpty(VER): VER = 3.3.0
+isEmpty(VER): VER = 4.0.0
 DEFINES += VERSION="$$VER"
 VERSION = $$VER.0
 QMAKE_TARGET_COMPANY = Gres
@@ -120,6 +120,12 @@ TRANSLATIONS += \
     share/translations/screentranslator_ru.ts \
     share/translations/screentranslator_he.ts
 
+translators.files = $$PWD/translators/*.js
+translators.path = /translators
+
+updates.files = $$PWD/updates.json
+updates.path = /
+
 linux {
     PREFIX = /usr
 
@@ -135,7 +141,7 @@ linux {
 win32 {
     RC_ICONS = $$PWD/share/images/icon.ico
     target.path = /
-    INSTALLS += target
+    INSTALLS += target translators updates
 }
 mac {
     ICON = $$PWD/share/images/icon.icns

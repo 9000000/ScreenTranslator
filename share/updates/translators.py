@@ -2,7 +2,7 @@ import sys
 import os
 import hashlib
 
-download_url = "https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master"
+download_url = "https://raw.githubusercontent.com/9000000/ScreenTranslator/master"
 
 if len(sys.argv) > 1:
     download_url = sys.argv[1]

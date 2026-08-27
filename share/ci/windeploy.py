@@ -49,6 +49,17 @@ for f in glob(ssl_dir + '/bin/*.dll'):
     c.print('>> Copying {} to {}'.format(f, install_dir))
     shutil.copy(f, install_dir)
 
+translators_src = os.path.abspath(os.path.join(pwd, 'translators'))
+translators_dest = os.path.join(install_dir, 'translators')
+if os.path.exists(translators_src):
+    c.print('>> Copying translators from {} to {}'.format(translators_src, translators_dest))
+    shutil.copytree(translators_src, translators_dest, dirs_exist_ok=True)
+
+updates_src = os.path.abspath(os.path.join(pwd, 'updates.json'))
+if os.path.exists(updates_src):
+    c.print('>> Copying {} to {}'.format(updates_src, install_dir))
+    shutil.copy(updates_src, install_dir)
+
 open(os.path.join(install_dir, 'qt.conf'), 'a').close() # fix for non-latin paths
 
 c.archive(c.get_folder_files(os.path.relpath(install_dir)), artifact_path)

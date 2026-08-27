@@ -24,7 +24,7 @@ namespace
 const auto updatesUrl = "http://localhost:8081/updates.json";
 #else
 const auto updatesUrl =
-    "https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/"
+    "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/"
     "updates.json";
 #endif
 const auto resultHideWaitUs = 300'000;

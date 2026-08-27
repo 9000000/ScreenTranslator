@@ -175,7 +175,7 @@ SettingsEditor::SettingsEditor(Manager &manager, update::Updater &updater)
   // about
   {
     const auto mail = "translator@gres.biz";
-    const QString baseUrl = "https://github.com/OneMoreGres/ScreenTranslator";
+    const QString baseUrl = "https://github.com/9000000/ScreenTranslator";
     const auto issues = baseUrl + "/issues";
     QLocale locale;
     const auto changelog =
