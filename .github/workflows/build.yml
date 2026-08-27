@@ -87,6 +87,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -116,6 +118,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.vars.outputs.release_name }}
           files: ./artifacts/*
           draft: false
