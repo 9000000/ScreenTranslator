@@ -1,50 +1,67 @@
-const API_KEY = 'YOUR_TOKEN_HERE'; // Replace with your Github API key https://github.com/settings/tokens
-const MODEL = 'gpt-4o-mini'; // Models https://github.com/marketplace/models , rate limits https://docs.github.com/en/github-models/prototyping-with-ai-models#rate-limits
+const API_KEY = 'YOUR_TOKEN_HERE'; // Replace with your Github Personal Access Token https://github.com/settings/tokens
+const MODEL = 'gpt-4o-mini'; // Models: gpt-4o-mini, gpt-4o, Meta-Llama-3.1-70B-Instruct (https://github.com/marketplace/models)
 const API_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const MAX_TOKENS = 2000;
-const TEMPERATURE = 0.5; // Controls the randomness of the output, lower values are more deterministic and higher values are more random (0 - 1)
+const TEMPERATURE = 0.3;
 
 function translate(text, from, to) {
-    console.log('Start translate (Github):', text, 'from:', from, 'to:', to);
-    
+    console.log('Start translate (Github):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
+
     if (text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
 
-    const prompt = `Translate from ${from} to ${to} and return only the translated text`;
+    if (!API_KEY || API_KEY === 'YOUR_TOKEN_HERE' || API_KEY.trim() === '') {
+        proxy.setFailed('Please set your GitHub Token in github_api.js');
+        return;
+    }
+
+    const systemPrompt = `You are a professional translator. Translate the provided text from ${from} to ${to}. Preserve original formatting, line breaks, and punctuation. Output ONLY the translated text without explanations, greetings, quotes, or markdown code blocks.`;
 
     const requestBody = {
         model: MODEL,
-        temperature: TEMPERATURE, 
+        temperature: TEMPERATURE,
         max_tokens: MAX_TOKENS,
-        messages: [{
-            role: "system",
-            content: prompt
-            }, {
-            role: "user",
-            content: text
-        }] 
+        messages: [
+            {
+                role: 'system',
+                content: systemPrompt
+            },
+            {
+                role: 'user',
+                content: text
+            }
+        ]
     };
 
     fetch(API_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`,
+            'Authorization': `Bearer ${API_KEY}`
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(requestBody)
     })
-    .then(response => {
+    .then(async response => {
         if (!response.ok) {
-            console.error('Error from Github API:', response.status, response.statusText);
-            proxy.setFailed(`Github API Error: ${response.status} ${response.statusText}`);
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorDetail = response.statusText;
+            try {
+                const errJson = await response.json();
+                if (errJson && errJson.error && errJson.error.message) {
+                    errorDetail = errJson.error.message;
+                }
+            } catch (e) {}
+            console.error('Error from Github API:', response.status, errorDetail);
+            proxy.setFailed(`Github API Error (${response.status}): ${errorDetail}`);
+            return null;
         }
         return response.json();
     })
     .then(data => {
-        if (data && data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
+        if (!data) return;
+
+        if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
             const translatedText = data.choices[0].message.content.trim();
             console.log('Translated text (Github):', translatedText);
             proxy.setTranslated(translatedText);
@@ -58,8 +75,7 @@ function translate(text, from, to) {
         proxy.setFailed(`Error fetching from Github API: ${error.message}`);
     });
 }
-    
+
 function init() {
     proxy.translate.connect(translate);
 }
-

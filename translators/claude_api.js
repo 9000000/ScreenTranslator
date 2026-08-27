@@ -1,11 +1,11 @@
-const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your OpenAI API key https://platform.openai.com/settings/organization/api-keys
-const MODEL = 'gpt-4o-mini'; // Models: gpt-4o-mini, gpt-4o, o3-mini (https://platform.openai.com/docs/models)
-const API_URL = 'https://api.openai.com/v1/chat/completions';
+const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Anthropic API key https://console.anthropic.com/settings/keys
+const MODEL = 'claude-3-5-haiku-20241022'; // Models: claude-3-5-haiku-20241022, claude-3-7-sonnet-20250219 (https://docs.anthropic.com/en/docs/about-claude/models)
+const API_URL = 'https://api.anthropic.com/v1/messages';
 const MAX_TOKENS = 2000;
 const TEMPERATURE = 0.3;
 
 function translate(text, from, to) {
-    console.log('Start translate (OpenAI):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
+    console.log('Start translate (Claude):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
     if (text.trim().length === 0) {
         proxy.setTranslated('');
@@ -13,7 +13,7 @@ function translate(text, from, to) {
     }
 
     if (!API_KEY || API_KEY === 'YOUR_API_KEY_HERE' || API_KEY.trim() === '') {
-        proxy.setFailed('Please set your OpenAI API key in openai_api.js');
+        proxy.setFailed('Please set your Anthropic Claude API key in claude_api.js');
         return;
     }
 
@@ -21,13 +21,10 @@ function translate(text, from, to) {
 
     const requestBody = {
         model: MODEL,
-        temperature: TEMPERATURE,
         max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
+        system: systemPrompt,
         messages: [
-            {
-                role: 'system',
-                content: systemPrompt
-            },
             {
                 role: 'user',
                 content: text
@@ -39,7 +36,9 @@ function translate(text, from, to) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`
+            'x-api-key': API_KEY,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify(requestBody)
     })
@@ -52,8 +51,8 @@ function translate(text, from, to) {
                     errorDetail = errJson.error.message;
                 }
             } catch (e) {}
-            console.error('Error from OpenAI API:', response.status, errorDetail);
-            proxy.setFailed(`OpenAI API Error (${response.status}): ${errorDetail}`);
+            console.error('Error from Claude API:', response.status, errorDetail);
+            proxy.setFailed(`Claude API Error (${response.status}): ${errorDetail}`);
             return null;
         }
         return response.json();
@@ -61,18 +60,18 @@ function translate(text, from, to) {
     .then(data => {
         if (!data) return;
 
-        if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (OpenAI):', translatedText);
+        if (data.content && data.content.length > 0 && data.content[0].type === 'text') {
+            const translatedText = data.content[0].text.trim();
+            console.log('Translated text (Claude):', translatedText);
             proxy.setTranslated(translatedText);
         } else {
-            console.error('Unexpected response from OpenAI API:', data);
-            proxy.setFailed('Unexpected response from OpenAI API');
+            console.error('Unexpected response from Claude API:', data);
+            proxy.setFailed('Unexpected response from Claude API');
         }
     })
     .catch(error => {
-        console.error('Error fetching from OpenAI API:', error);
-        proxy.setFailed(`Error fetching from OpenAI API: ${error.message}`);
+        console.error('Error fetching from Claude API:', error);
+        proxy.setFailed(`Error fetching from Claude API: ${error.message}`);
     });
 }
 
