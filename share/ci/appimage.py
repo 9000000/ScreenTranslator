@@ -41,7 +41,11 @@ if c.is_inside_docker():
     c.run('{}  --appimage-extract'.format(linuxdeployqt_bin))
     linuxdeployqt_bin = os.path.abspath('squashfs-root/AppRun')
 
-os.environ['LD_LIBRARY_PATH'] = dependencies_dir + '/lib'
+os.environ['LD_LIBRARY_PATH'] = ':'.join(filter(None, [
+    qt_dir + '/lib',
+    dependencies_dir + '/lib',
+    os.environ.get('LD_LIBRARY_PATH', '')
+]))
 os.environ['VERSION'] = app_version
 # debug flags: -unsupported-bundle-everything -unsupported-allow-new-glibc
 flags = '' if os.getenv("DEBUG") is None else '-unsupported-allow-new-glibc'
