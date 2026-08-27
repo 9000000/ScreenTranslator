@@ -118,7 +118,7 @@ QString HunspellCorrector::correct(const QString &original)
 
   QString word;
   QString separator;
-  for (auto i = 0, end = original.size(); i < end; ++i) {
+  for (qsizetype i = 0, end = original.size(); i < end; ++i) {
     const auto ch = original[i];
     if (ch.isPunct() || ch.isSpace()) {
       if (!word.isEmpty()) {

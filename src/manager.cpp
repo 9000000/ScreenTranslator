@@ -12,10 +12,12 @@
 #include "updates.h"
 
 #include <QApplication>
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QNetworkProxy>
+#include <QStandardPaths>
 #include <QThread>
 
 namespace
