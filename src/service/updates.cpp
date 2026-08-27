@@ -1,4 +1,4 @@
-﻿#include "updates.h"
+#include "updates.h"
 #include "debug.h"
 
 #include <QApplication>
@@ -59,7 +59,7 @@ static QByteArray unpack(const QByteArray &data)
       continue;
 
     QByteArray result(file_stat.m_uncomp_size, 0);
-    mz_zip_reader_extract_to_mem(&zip, 0, result.data(), result.size(), 0);
+    mz_zip_reader_extract_to_mem(&zip, i, result.data(), result.size(), 0);
     return result;
   }
 

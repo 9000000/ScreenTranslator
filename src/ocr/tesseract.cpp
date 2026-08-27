@@ -226,10 +226,10 @@ void Tesseract::init(const LanguageId &language, const QString &tessdataPath)
   auto result = api_->Init(qPrintable(tessdataPath), qPrintable(tesseractName),
                            tesseract::OcrEngineMode::OEM_DEFAULT);
   LTRACE() << "Inited Tesseract api" << result;
-  if (result == 0)
+  if (result == 0) {
+    api_->SetPageSegMode(tesseract::PageSegMode::PSM_AUTO);
     return;
-
-  api_->SetPageSegMode(tesseract::PageSegMode::PSM_AUTO);
+  }
 
   error_ = QObject::tr("init failed");
   api_.reset();

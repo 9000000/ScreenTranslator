@@ -587,27 +587,63 @@
 
 
 ,"translators":{
- "baidu": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/baidu.js", "path":"$translators$/baidu.js", "md5":"be3eb6d11fa5faebb046c887c9a8f3bd", "size":1501}
- ]}
- ,"bing": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/bing.js", "path":"$translators$/bing.js", "md5":"a982e9aa6cac598f4c9bf4a56386d13e", "size":1481}
- ]}
- ,"deepl": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/deepl.js", "path":"$translators$/deepl.js", "md5":"76856af9b80c3d0e852ca73f8f1ebbdb", "size":2611}
- ]}
- ,"google": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/google.js", "path":"$translators$/google.js", "md5":"793d6628ac9e26a1f3cc00fa9c863495", "size":1508}
- ]}
- ,"google_api": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/google_api.js", "path":"$translators$/google_api.js", "md5":"90b9b1a5c8dc52fd4a3f28be93442a56", "size":1030}
- ]}
- ,"papago": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/papago.js", "path":"$translators$/papago.js", "md5":"603a56fc23990453942064ec53d1eaa3", "size":2164}
- ]}
- ,"yandex": {"files":[
-  {"url":"https://raw.githubusercontent.com/OneMoreGres/ScreenTranslator/master/translators/yandex.js", "path":"$translators$/yandex.js", "md5":"82c10bddde30f3a1dc6675f7eea71986", "size":1170}
- ]}
+  "baidu": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/baidu.js", "path":"$translators$/baidu.js", "md5":"77c469b882c9d1079070802b7bc8d7cc", "size":2390}
+  ]}
+  ,"bing": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/bing.js", "path":"$translators$/bing.js", "md5":"0a61c48649a066b6d121af023740c1a0", "size":2086}
+  ]}
+  ,"claude_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/claude_api.js", "path":"$translators$/claude_api.js", "md5":"4317f5f7106826789fe86b7df5813e25", "size":3004}
+  ]}
+  ,"deepl": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/deepl.js", "path":"$translators$/deepl.js", "md5":"3b6a7312707a1e2ede508fc322e7d424", "size":3427}
+  ]}
+  ,"deepl_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/deepl_api.js", "path":"$translators$/deepl_api.js", "md5":"395b32faa1e5d21ccafd1d57eeca44ea", "size":2968}
+  ]}
+  ,"deepseek_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/deepseek_api.js", "path":"$translators$/deepseek_api.js", "md5":"2ca986a5d2edf63fc3d19267f342be42", "size":3021}
+  ]}
+  ,"gemini_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/gemini_api.js", "path":"$translators$/gemini_api.js", "md5":"4f204dca4ec853a821b35aac5a81120e", "size":4406}
+  ]}
+  ,"github_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/github_api.js", "path":"$translators$/github_api.js", "md5":"0fc268edb27bcba8a816fb7c3031ce4f", "size":2982}
+  ]}
+  ,"google": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/google.js", "path":"$translators$/google.js", "md5":"c37dc29999a886888f1d7edebb15216f", "size":2140}
+  ]}
+  ,"google_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/google_api.js", "path":"$translators$/google_api.js", "md5":"bd98bb393700d00e8fc465f3c9b4f1fa", "size":1932}
+  ]}
+  ,"groq_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/groq_api.js", "path":"$translators$/groq_api.js", "md5":"47e40428251bdc51ad7369d8d3010e04", "size":2979}
+  ]}
+  ,"ollama_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/ollama_api.js", "path":"$translators$/ollama_api.js", "md5":"fed54f82a1ef82b90abb7354b9cc0d27", "size":2723}
+  ]}
+  ,"openai_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/openai_api.js", "path":"$translators$/openai_api.js", "md5":"2dc68322b786ecec9f5c6436bbb2ed74", "size":2968}
+  ]}
+  ,"openrouter_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/openrouter_api.js", "path":"$translators$/openrouter_api.js", "md5":"e7790fe889eadd87de26e677f0ca60bf", "size":3182}
+  ]}
+  ,"papago": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/papago.js", "path":"$translators$/papago.js", "md5":"ddb98295aad5a98957892c8dc5edd5fb", "size":2729}
+  ]}
+  ,"perplexity_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/perplexity_api.js", "path":"$translators$/perplexity_api.js", "md5":"a99f7412d6a9c36118af0282aa969825", "size":3012}
+  ]}
+  ,"togetherai_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/togetherai_api.js", "path":"$translators$/togetherai_api.js", "md5":"a0119d64482b8920365048ba400e2670", "size":3098}
+  ]}
+  ,"xai_api": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/xai_api.js", "path":"$translators$/xai_api.js", "md5":"1cf2052db8e9e6ee8aa26cf06dd6b4b4", "size":2888}
+  ]}
+  ,"yandex": {"files":[
+   {"url":"https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/yandex.js", "path":"$translators$/yandex.js", "md5":"f05ac9945ba8a7ca00fd1acc1bdcad36", "size":1720}
+  ]}
 }
 
 
