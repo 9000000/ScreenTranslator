@@ -2,6 +2,9 @@ CONFIG += c++17
 CONFIG -= app_bundle
 
 QT += widgets network testlib
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
 
 INCLUDEPATH += $$PWD/../external $$PWD/../src/service
 

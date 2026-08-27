@@ -1,5 +1,8 @@
 #pragma once
 
+#include <atomic>
+#include <iterator>
+#include <memory>
 #include <QDebug>
 
 namespace debug
