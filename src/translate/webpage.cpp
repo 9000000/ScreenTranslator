@@ -109,8 +109,13 @@ void WebPage::setTimeout(std::chrono::seconds timeout)
 
 void WebPage::start(const TaskPtr &task)
 {
-  const auto sourceLanguage = LanguageCodes::iso639_1(task->sourceLanguage);
-  const auto targetLanguage = LanguageCodes::iso639_1(task->targetLanguage);
+  auto sourceLanguage = LanguageCodes::iso639_1(task->sourceLanguage);
+  auto targetLanguage = LanguageCodes::iso639_1(task->targetLanguage);
+  if (sourceLanguage.isEmpty())
+    sourceLanguage = task->sourceLanguage;
+  if (targetLanguage.isEmpty())
+    targetLanguage = task->targetLanguage;
+
   if (sourceLanguage.isEmpty() || targetLanguage.isEmpty()) {
     task->error = QObject::tr("unknown translation languages: %1 or %2")
                       .arg(task->sourceLanguage)
