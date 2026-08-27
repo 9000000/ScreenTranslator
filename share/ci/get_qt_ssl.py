@@ -3,27 +3,40 @@ from config import ssl_dir, os_name
 import sys
 import os
 
-c.print('>> Downloading ssl for Qt for {}'.format(os_name))
+c.print('>> Checking SSL for Qt for {}'.format(os_name))
 
-if os_name == 'linux':
-    os.makedirs('ssl/lib', exist_ok=True)
-    c.print('>> Linux build: skipped downloading openssl (relying on host system OpenSSL)')
-    sys.exit(0)
-elif os_name == 'macos':
-    sys.exit(0)
-elif os_name == 'win32':
-    url = 'https://wiki.overbyte.eu/arch/openssl-1.1.1w-win32.zip'
-    file_name = 'openssl-1.1.1w-win32.zip'
-elif os_name == 'win64':
-    url = 'https://wiki.overbyte.eu/arch/openssl-1.1.1w-win64.zip'
-    file_name = 'openssl-1.1.1w-win64.zip'
-else:
-    c.print('>> Unknown OS: {}'.format(os_name))
-    sys.exit(1)
-
-# Download and extract the OpenSSL DLLs into ssl/bin
 dest_dir = os.path.join(ssl_dir, 'bin')
 os.makedirs(dest_dir, exist_ok=True)
 
-c.download(url, file_name)
-c.extract(file_name, dest_dir)
+if os_name == 'linux' or os_name == 'macos':
+    c.print('>> {} build: relying on host system SSL'.format(os_name))
+    sys.exit(0)
+
+# Windows OpenSSL mirrors
+urls = []
+if os_name == 'win64':
+    urls = [
+        'https://github.com/IndySockets/OpenSSL-Binaries/raw/master/openssl-1.1.1w-win64.zip',
+        'https://wiki.overbyte.eu/arch/openssl-1.1.1w-win64.zip',
+    ]
+elif os_name == 'win32':
+    urls = [
+        'https://github.com/IndySockets/OpenSSL-Binaries/raw/master/openssl-1.1.1w-win32.zip',
+        'https://wiki.overbyte.eu/arch/openssl-1.1.1w-win32.zip',
+    ]
+
+downloaded = False
+for url in urls:
+    file_name = os.path.basename(url)
+    try:
+        c.print('>> Downloading SSL from {}'.format(url))
+        c.download(url, file_name)
+        c.extract(file_name, dest_dir)
+        downloaded = True
+        c.print('>> SSL binaries successfully extracted to {}'.format(dest_dir))
+        break
+    except Exception as e:
+        c.print('>> Warning: failed to download from {}: {}'.format(url, e))
+
+if not downloaded:
+    c.print('>> Notice: OpenSSL download skipped; Qt 6 on Windows uses native Windows Schannel TLS by default.')
