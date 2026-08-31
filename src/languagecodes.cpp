@@ -152,6 +152,16 @@ const std::unordered_map<LanguageId, LanguageCodes::Bundle>
 
 LanguageId LanguageCodes::idForName(const QString &name)
 {
+  if (name.contains(QLatin1Char('+'))) {
+    const auto parts = name.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    QStringList ids;
+    ids.reserve(parts.size());
+    for (const auto &part : parts) {
+      ids.append(idForName(part.trimmed()));
+    }
+    return ids.join(QLatin1Char('+'));
+  }
+
   auto it = std::find_if(codes_.cbegin(), codes_.cend(),
                          [name](const std::pair<LanguageId, Bundle> &i) {
                            return name == QObject::tr(i.second.name);
@@ -163,6 +173,16 @@ LanguageId LanguageCodes::idForName(const QString &name)
 
 LanguageId LanguageCodes::idForTesseract(const QString &tesseract)
 {
+  if (tesseract.contains(QLatin1Char('+'))) {
+    const auto parts = tesseract.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    QStringList ids;
+    ids.reserve(parts.size());
+    for (const auto &part : parts) {
+      ids.append(idForTesseract(part.trimmed()));
+    }
+    return ids.join(QLatin1Char('+'));
+  }
+
   auto it = std::find_if(codes_.cbegin(), codes_.cend(),
                          [tesseract](const std::pair<LanguageId, Bundle> &i) {
                            return tesseract == i.second.tesseract;
@@ -174,6 +194,10 @@ LanguageId LanguageCodes::idForTesseract(const QString &tesseract)
 
 QString LanguageCodes::iso639_1(const LanguageId &id)
 {
+  if (id.contains(QLatin1Char('+'))) {
+    return QStringLiteral("auto");
+  }
+
   auto it = codes_.find(id);
   if (it != codes_.cend() && !it->second.iso639_1.isEmpty()) {
     return it->second.iso639_1;
@@ -183,6 +207,16 @@ QString LanguageCodes::iso639_1(const LanguageId &id)
 
 QString LanguageCodes::tesseract(const LanguageId &id)
 {
+  if (id.contains(QLatin1Char('+'))) {
+    const auto parts = id.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    QStringList tessCodes;
+    tessCodes.reserve(parts.size());
+    for (const auto &part : parts) {
+      tessCodes.append(tesseract(part.trimmed()));
+    }
+    return tessCodes.join(QLatin1Char('+'));
+  }
+
   auto it = codes_.find(id);
   if (it != codes_.cend() && !it->second.tesseract.isEmpty()) {
     return it->second.tesseract;
@@ -192,6 +226,16 @@ QString LanguageCodes::tesseract(const LanguageId &id)
 
 QString LanguageCodes::name(const LanguageId &id)
 {
+  if (id.contains(QLatin1Char('+'))) {
+    const auto parts = id.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    QStringList names;
+    names.reserve(parts.size());
+    for (const auto &part : parts) {
+      names.append(name(part.trimmed()));
+    }
+    return names.join(QStringLiteral(" + "));
+  }
+
   auto it = codes_.find(id);
   return it != codes_.cend() ? QObject::tr(it->second.name) : id;
 }
@@ -208,3 +252,4 @@ LanguageId LanguageCodes::anyLanguageId()
 {
   return "any";
 }
+

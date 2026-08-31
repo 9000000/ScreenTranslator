@@ -30,6 +30,13 @@ bool SettingsValidator::correct(Settings &settings, const CommonModels &models)
 {
   auto changed = false;
 
+  if (settings.sourceLanguage.isEmpty() &&
+      models.sourceLanguageModel()->rowCount() > 0) {
+    const auto firstName = models.sourceLanguageModel()->stringList().first();
+    settings.sourceLanguage = LanguageCodes::idForName(firstName);
+    changed = true;
+  }
+
   if (settings.doTranslation && settings.translators.isEmpty() &&
       !models.translators().isEmpty()) {
     settings.translators = models.translators();

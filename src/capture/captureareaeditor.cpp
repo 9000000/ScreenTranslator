@@ -70,7 +70,11 @@ void CaptureAreaEditor::set(const CaptureArea &area)
   isLocked_->setChecked(area.isLocked());
   useHunspell_->setChecked(area.useHunspell_);
   doTranslation_->setChecked(area.doTranslation_);
-  sourceLanguage_->setCurrentText(LanguageCodes::name(area.sourceLanguage_));
+  const auto srcName = LanguageCodes::name(area.sourceLanguage_);
+  if (sourceLanguage_->findText(srcName) == -1) {
+    sourceLanguage_->addItem(srcName);
+  }
+  sourceLanguage_->setCurrentText(srcName);
   targetLanguage_->setCurrentText(LanguageCodes::name(area.targetLanguage_));
 }
 

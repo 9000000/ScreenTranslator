@@ -100,11 +100,19 @@ QString Corrector::substituteUser(const QString &source,
   using It = Substitutions::const_iterator;
   std::vector<std::pair<It, It>> ranges;
 
-  {
+  const auto langParts = language.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+  for (const auto &part : langParts) {
+    const auto range = settings_.userSubstitutions.equal_range(part.trimmed());
+    if (range.first != settings_.userSubstitutions.cend())
+      ranges.push_back(range);
+  }
+
+  if (langParts.size() > 1) {
     const auto range = settings_.userSubstitutions.equal_range(language);
     if (range.first != settings_.userSubstitutions.cend())
       ranges.push_back(range);
   }
+
   {
     const auto anyId = LanguageCodes::anyLanguageId();
     const auto range = settings_.userSubstitutions.equal_range(anyId);

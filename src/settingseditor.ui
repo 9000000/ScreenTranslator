@@ -304,23 +304,7 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="2">
-          <widget class="QComboBox" name="tesseractLangCombo"/>
-         </item>
-         <item row="2" column="2">
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>17</width>
-             <height>410</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="0" column="2">
+         <item row="0" column="1">
           <widget class="QLabel" name="tessdataPath">
            <property name="text">
             <string/>
@@ -333,19 +317,26 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="0">
+         <item row="1" column="0" colspan="2">
           <widget class="QLabel" name="label_4">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
            <property name="text">
-            <string>Default language:</string>
+            <string>Recognition languages (check one or more):</string>
            </property>
-           <property name="buddy">
-            <cstring>tesseractLangCombo</cstring>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QListWidget" name="tesseractLangList">
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="dragDropMode">
+            <enum>QAbstractItemView::InternalMove</enum>
+           </property>
+           <property name="defaultDropAction">
+            <enum>Qt::MoveAction</enum>
            </property>
           </widget>
          </item>

@@ -123,7 +123,7 @@ SettingsEditor::SettingsEditor(Manager &manager, update::Updater &updater)
   }
 
   // recognition
-  ui->tesseractLangCombo->setModel(models_.sourceLanguageModel());
+  // recognition languages handled by tesseractLangList
 
   // correction
   ui->userSubstitutionsTable->setEnabled(ui->useUserSubstitutions->isChecked());
@@ -260,8 +260,7 @@ Settings SettingsEditor::settings() const
   settings.proxyPassword = ui->proxyPassEdit->text();
   settings.proxySavePassword = ui->proxySaveCheck->isChecked();
 
-  settings.sourceLanguage =
-      LanguageCodes::idForName(ui->tesseractLangCombo->currentText());
+  settings.sourceLanguage = enabledTesseractLanguages();
 
   settings.useHunspell = ui->useHunspell->isChecked();
   settings.useUserSubstitutions = ui->useUserSubstitutions->isChecked();
@@ -319,8 +318,7 @@ void SettingsEditor::setSettings(const Settings &settings)
   ui->translatorsPath->setText(settings.translatorsPath);
   updateModels();
 
-  ui->tesseractLangCombo->setCurrentText(
-      LanguageCodes::name(settings.sourceLanguage));
+  updateTesseractLanguages(settings.sourceLanguage);
 
   ui->useHunspell->setChecked(settings.useHunspell);
   ui->hunspellDir->setText(settings.hunspellPath);
@@ -363,6 +361,7 @@ void SettingsEditor::updateState()
   ui->hunspellDir->setText(settings.hunspellPath);
 
   updateModels();
+  updateTesseractLanguages(enabledTesseractLanguages());
   updateTranslators(enabledTranslators());
   validateSettings();
   updateCurrentPage();
@@ -393,6 +392,34 @@ void SettingsEditor::updateCurrentPage()
 
   if (ui->updatesView->model()->rowCount() == 0)
     updater_.checkForUpdates();
+}
+
+void SettingsEditor::updateTesseractLanguages(const QString &sourceLanguage)
+{
+  ui->tesseractLangList->clear();
+  const auto availableNames = models_.sourceLanguageModel()->stringList();
+  if (availableNames.isEmpty())
+    return;
+
+  const auto selectedIds =
+      sourceLanguage.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+  QStringList selectedNames;
+  for (const auto &id : selectedIds) {
+    const auto name = LanguageCodes::name(id.trimmed());
+    if (availableNames.contains(name))
+      selectedNames.append(name);
+  }
+
+  QStringList all = selectedNames;
+  all += availableNames;
+  all.removeDuplicates();
+  ui->tesseractLangList->addItems(all);
+
+  for (auto i = 0, end = ui->tesseractLangList->count(); i < end; ++i) {
+    auto item = ui->tesseractLangList->item(i);
+    item->setCheckState(selectedNames.contains(item->text()) ? Qt::Checked
+                                                             : Qt::Unchecked);
+  }
 }
 
 void SettingsEditor::updateTranslators(const QStringList &translators)
@@ -451,6 +478,20 @@ void SettingsEditor::updateResultFont()
   ui->backgroundColor->setPalette(palette);
 }
 
+QString SettingsEditor::enabledTesseractLanguages() const
+{
+  QStringList result;
+  for (auto i = 0, end = ui->tesseractLangList->count(); i < end; ++i) {
+    auto item = ui->tesseractLangList->item(i);
+    if (item->checkState() == Qt::Checked) {
+      const auto id = LanguageCodes::idForName(item->text());
+      if (!id.isEmpty())
+        result.append(id);
+    }
+  }
+  return result.join(QLatin1Char('+'));
+}
+
 QStringList SettingsEditor::enabledTranslators() const
 {
   QStringList result;
@@ -464,13 +505,10 @@ QStringList SettingsEditor::enabledTranslators() const
 
 void SettingsEditor::updateModels()
 {
-  const auto source = ui->tesseractLangCombo->currentText();
+  const auto selected = enabledTesseractLanguages();
   models_.update(ui->tessdataPath->text(), ui->translatorsPath->text());
-  if (!source.isEmpty()) {
-    ui->tesseractLangCombo->setCurrentText(source);
-  } else if (ui->tesseractLangCombo->count() > 0) {
-    ui->tesseractLangCombo->setCurrentIndex(0);
-  }
+  updateTesseractLanguages(selected.isEmpty() ? QStringLiteral("eng")
+                                              : selected);
 }
 
 void SettingsEditor::pickColor(QWidget *widget)

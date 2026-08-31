@@ -27,10 +27,12 @@ private:
   void handleButtonBoxClicked(QAbstractButton *button);
   void pickColor(QWidget *widget);
   void updateResultFont();
+  QString enabledTesseractLanguages() const;
   QStringList enabledTranslators() const;
 
   void updateState();
   void updateCurrentPage();
+  void updateTesseractLanguages(const QString &sourceLanguage);
   void updateTranslators(const QStringList &translators);
   void updateModels();
   void validateSettings();

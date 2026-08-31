@@ -72,7 +72,12 @@ void ResultEditor::show(const TaskPtr &task)
   const auto target = task->targetLanguage.isEmpty() ? settings_.targetLanguage
                                                      : task->targetLanguage;
   targetLanguage_->setCurrentText(LanguageCodes::name(target));
-  sourceLanguage_->setCurrentText(LanguageCodes::name(task->sourceLanguage));
+
+  const auto srcName = LanguageCodes::name(task->sourceLanguage);
+  if (sourceLanguage_->findText(srcName) == -1) {
+    sourceLanguage_->addItem(srcName);
+  }
+  sourceLanguage_->setCurrentText(srcName);
 
   QWidget::show();
 }
