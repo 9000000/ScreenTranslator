@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       custom_version:
-        description: 'Tên/số phiên bản tùy chỉnh (ví dụ: v4.1.1 hoặc 4.1.0-custom)'
+        description: 'Tên/số phiên bản tùy chỉnh (ví dụ: v4.1.1 hoặc 4.2.0-custom)'
         required: false
         default: ''
 
@@ -105,7 +105,7 @@ jobs:
             TAG="${{ github.ref_name }}"
           else
             PRO_VER=$(grep -E 'VER\s*=' screen-translator.pro | sed -E 's/.*VER\s*=\s*//' | tr -d ' \r\n')
-            [ -z "$PRO_VER" ] && PRO_VER="4.1.0"
+            [ -z "$PRO_VER" ] && PRO_VER="4.2.0"
             TAG="v${PRO_VER}"
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT

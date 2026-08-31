@@ -21,7 +21,7 @@ custom_version = getenv('VERSION') or getenv('APP_VERSION')
 if custom_version:
     app_version = custom_version.lstrip('v').strip()
 else:
-    app_version = '4.1.0'
+    app_version = '4.2.0'
     if path.exists(pro_file):
         with open(pro_file, 'r') as f:
             match = re.search(r'VER\s*=\s*(.*)', f.read())

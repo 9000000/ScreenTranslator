@@ -27,7 +27,7 @@ linux{
 SOURCES += $$PWD/external/miniz/miniz.c
 INCLUDEPATH += $$PWD/external
 
-isEmpty(VER): VER = 4.1.0
+isEmpty(VER): VER = 4.2.0
 DEFINES += VERSION="$$VER"
 VERSION = $$VER.0
 QMAKE_TARGET_COMPANY = Gres
