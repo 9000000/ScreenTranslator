@@ -121,17 +121,20 @@ void WebPage::setTimeout(std::chrono::seconds timeout)
 
 void WebPage::start(const TaskPtr &task)
 {
+  const auto effectiveTarget = LanguageCodes::resolveTargetLanguage(
+      task->corrected, task->sourceLanguage, task->targetLanguage);
+
   auto sourceLanguage = LanguageCodes::iso639_1(task->sourceLanguage);
-  auto targetLanguage = LanguageCodes::iso639_1(task->targetLanguage);
+  auto targetLanguage = LanguageCodes::iso639_1(effectiveTarget);
   if (sourceLanguage.isEmpty())
     sourceLanguage = task->sourceLanguage;
   if (targetLanguage.isEmpty())
-    targetLanguage = task->targetLanguage;
+    targetLanguage = effectiveTarget;
 
   if (sourceLanguage.isEmpty() || targetLanguage.isEmpty()) {
     task->error = QObject::tr("unknown translation languages: %1 or %2")
                       .arg(task->sourceLanguage)
-                      .arg(task->targetLanguage);
+                      .arg(effectiveTarget);
     translator_.finish(task);
     return;
   }

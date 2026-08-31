@@ -253,3 +253,89 @@ LanguageId LanguageCodes::anyLanguageId()
   return "any";
 }
 
+namespace
+{
+bool isVietnameseText(const QString &text)
+{
+  static const QString vietnameseChars = QString::fromUtf8(
+      "àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ"
+      "ÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ"
+      "đĐ");
+  for (const auto &ch : text) {
+    if (vietnameseChars.contains(ch))
+      return true;
+  }
+  return false;
+}
+
+bool isMatchingScriptOrLanguage(const QString &text, const LanguageId &lang)
+{
+  const auto iso = LanguageCodes::iso639_1(lang);
+  if (iso == QLatin1String("vi") || lang.startsWith(QLatin1String("vie"))) {
+    return isVietnameseText(text);
+  }
+
+  int scriptCount = 0;
+  int letterCount = 0;
+  for (const auto &ch : text) {
+    if (!ch.isLetter())
+      continue;
+    ++letterCount;
+    const auto script = ch.script();
+    if (iso == QLatin1String("ru") || iso == QLatin1String("uk") ||
+        iso == QLatin1String("be") || iso == QLatin1String("bg")) {
+      if (script == QChar::Script_Cyrillic)
+        ++scriptCount;
+    } else if (iso == QLatin1String("ja") ||
+               lang.startsWith(QLatin1String("jpn"))) {
+      if (script == QChar::Script_Hiragana || script == QChar::Script_Katakana)
+        return true;
+    } else if (iso == QLatin1String("ko") ||
+               lang.startsWith(QLatin1String("kor"))) {
+      if (script == QChar::Script_Hangul)
+        return true;
+    } else if (iso == QLatin1String("zh") ||
+               lang.startsWith(QLatin1String("chi"))) {
+      if (script == QChar::Script_Han)
+        ++scriptCount;
+    } else if (iso == QLatin1String("ar")) {
+      if (script == QChar::Script_Arabic)
+        ++scriptCount;
+    } else if (iso == QLatin1String("th")) {
+      if (script == QChar::Script_Thai)
+        ++scriptCount;
+    }
+  }
+
+  if (letterCount > 0 && scriptCount > letterCount / 3)
+    return true;
+
+  return false;
+}
+}  // namespace
+
+LanguageId LanguageCodes::resolveTargetLanguage(const QString &text,
+                                               const LanguageId &sourceLang,
+                                               const LanguageId &targetLang)
+{
+  if (text.trimmed().isEmpty() || targetLang.isEmpty())
+    return targetLang;
+
+  if (isMatchingScriptOrLanguage(text, targetLang)) {
+    const auto srcParts =
+        sourceLang.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    for (const auto &part : srcParts) {
+      const auto trimmed = part.trimmed();
+      if (iso639_1(trimmed) != iso639_1(targetLang)) {
+        return trimmed;
+      }
+    }
+    if (iso639_1(targetLang) == QLatin1String("vi"))
+      return QStringLiteral("eng");
+    return QStringLiteral("vie");
+  }
+
+  return targetLang;
+}
+
+

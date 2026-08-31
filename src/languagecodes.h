@@ -18,6 +18,9 @@ public:
   static QString name(const LanguageId& id);
   static std::vector<LanguageId> allIds();
   static LanguageId anyLanguageId();
+  static LanguageId resolveTargetLanguage(const QString& text,
+                                          const LanguageId& sourceLang,
+                                          const LanguageId& targetLang);
 
 private:
   struct Bundle {
