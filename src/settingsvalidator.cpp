@@ -1,5 +1,6 @@
 #include "settingsvalidator.h"
 
+#include "languagecodes.h"
 #include <commonmodels.h>
 #include <settings.h>
 
