@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QSize>
 #include <QString>
 
 #include <optional>
@@ -18,9 +19,15 @@ public:
   static QString name(const LanguageId& id);
   static std::vector<LanguageId> allIds();
   static LanguageId anyLanguageId();
-  static LanguageId resolveTargetLanguage(const QString& text,
-                                          const LanguageId& sourceLang,
-                                          const LanguageId& targetLang);
+  static LanguageId autoLanguageId();
+  static bool isAuto(const LanguageId& id);
+  static bool isSameLanguage(const QString& text,
+                             const LanguageId& detectedSourceLang,
+                             const LanguageId& targetLang);
+  static double scoreRecognizedText(const QString& text,
+                                    const LanguageId& langId,
+                                    int confidence,
+                                    const QSize& imageSize = {});
 
 private:
   struct Bundle {

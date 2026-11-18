@@ -52,7 +52,10 @@ void Corrector::correct(const TaskPtr &task)
   task->corrected = task->recognized;
 
   if (settings_.useUserSubstitutions && !settings_.userSubstitutions.empty()) {
-    task->corrected = substituteUser(task->recognized, task->sourceLanguage);
+    const auto effectiveLang = task->detectedLanguage.isEmpty()
+                                   ? task->sourceLanguage
+                                   : task->detectedLanguage;
+    task->corrected = substituteUser(task->recognized, effectiveLang);
     LTRACE() << "Corrected with user data";
   }
 

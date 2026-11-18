@@ -2,7 +2,7 @@ var lastText = '';
 var active = window.location.href !== "about:blank";
 
 function mapBaiduLang(lang) {
-    if (!lang) return 'auto';
+    if (!lang || lang === 'auto') return 'auto';
     const map = {
         'zh-CN': 'zh',
         'zh-TW': 'cht',

@@ -41,9 +41,10 @@ function translate(text, from, to) {
 
     active = true;
     let targetLang = mapBingLang(to);
-    let srcLang = from ? mapBingLang(from) : 'auto-detect';
+    let srcLang = (from && from !== 'auto') ? mapBingLang(from) : 'auto-detect';
 
     if (window.location.href.indexOf('bing.com/translator') !== -1
+        && window.location.href.indexOf('from=' + srcLang) !== -1
         && window.location.href.indexOf('to=' + targetLang) !== -1) {
         var input = document.querySelector('textarea#tta_input_ta') || document.querySelector('.tta_input_ta');
         if (input) {

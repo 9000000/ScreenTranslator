@@ -57,7 +57,7 @@ public:
   bool writeTrace{false};
 
   QString tessdataPath;
-  QString sourceLanguage{"eng"};
+  QString sourceLanguage{"auto"};
 
   bool doTranslation{true};
   bool ignoreSslErrors{false};

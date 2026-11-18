@@ -2722,8 +2722,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/baidu.js",
           "path": "$translators$/baidu.js",
-          "md5": "77c469b882c9d1079070802b7bc8d7cc",
-          "size": 2390
+          "md5": "6ace22b4ecbf7644ccee0351047d6670",
+          "size": 2409
         }
       ]
     },
@@ -2732,8 +2732,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/bing.js",
           "path": "$translators$/bing.js",
-          "md5": "0a61c48649a066b6d121af023740c1a0",
-          "size": 2086
+          "md5": "eeb6e8496733bf8afbaa7ca20dc749d0",
+          "size": 2173
         }
       ]
     },
@@ -2742,8 +2742,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/claude_api.js",
           "path": "$translators$/claude_api.js",
-          "md5": "4317f5f7106826789fe86b7df5813e25",
-          "size": 3004
+          "md5": "845cb70984ec639c5bd5e4eea0e33177",
+          "size": 3127
         }
       ]
     },
@@ -2752,8 +2752,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/deepl.js",
           "path": "$translators$/deepl.js",
-          "md5": "3b6a7312707a1e2ede508fc322e7d424",
-          "size": 3427
+          "md5": "9fae85811f275fdc78754bc67afb37b1",
+          "size": 3467
         }
       ]
     },
@@ -2772,8 +2772,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/deepseek_api.js",
           "path": "$translators$/deepseek_api.js",
-          "md5": "2ca986a5d2edf63fc3d19267f342be42",
-          "size": 3021
+          "md5": "5641f9e021d2566e05857f7435534ad1",
+          "size": 3144
         }
       ]
     },
@@ -2782,8 +2782,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/gemini_api.js",
           "path": "$translators$/gemini_api.js",
-          "md5": "4f204dca4ec853a821b35aac5a81120e",
-          "size": 4406
+          "md5": "4c39509d52460f49650de16446608b8e",
+          "size": 4529
         }
       ]
     },
@@ -2792,8 +2792,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/github_api.js",
           "path": "$translators$/github_api.js",
-          "md5": "0fc268edb27bcba8a816fb7c3031ce4f",
-          "size": 2982
+          "md5": "6954388db44fcabe9cc3a90db5c2bc9d",
+          "size": 3105
         }
       ]
     },
@@ -2802,8 +2802,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/google.js",
           "path": "$translators$/google.js",
-          "md5": "c37dc29999a886888f1d7edebb15216f",
-          "size": 2140
+          "md5": "ec641a042ff4dcf9a4c6c0f5923c7bf1",
+          "size": 2199
         }
       ]
     },
@@ -2822,8 +2822,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/groq_api.js",
           "path": "$translators$/groq_api.js",
-          "md5": "47e40428251bdc51ad7369d8d3010e04",
-          "size": 2979
+          "md5": "ca0ab53856064dd0177869b007d65405",
+          "size": 3102
         }
       ]
     },
@@ -2832,8 +2832,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/ollama_api.js",
           "path": "$translators$/ollama_api.js",
-          "md5": "fed54f82a1ef82b90abb7354b9cc0d27",
-          "size": 2723
+          "md5": "4fdb88bc689306003d1d134cf95fd66d",
+          "size": 2846
         }
       ]
     },
@@ -2842,8 +2842,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/openai_api.js",
           "path": "$translators$/openai_api.js",
-          "md5": "2dc68322b786ecec9f5c6436bbb2ed74",
-          "size": 2968
+          "md5": "ec8b940f4a0bc266cd0209a873ea34b9",
+          "size": 3091
         }
       ]
     },
@@ -2852,8 +2852,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/openrouter_api.js",
           "path": "$translators$/openrouter_api.js",
-          "md5": "e7790fe889eadd87de26e677f0ca60bf",
-          "size": 3182
+          "md5": "dc390518beb4ef7fb4f31b7dd40ebd2a",
+          "size": 3301
         }
       ]
     },
@@ -2862,8 +2862,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/papago.js",
           "path": "$translators$/papago.js",
-          "md5": "ddb98295aad5a98957892c8dc5edd5fb",
-          "size": 2729
+          "md5": "73ba66b505895afdf9778949dee74015",
+          "size": 2769
         }
       ]
     },
@@ -2872,8 +2872,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/perplexity_api.js",
           "path": "$translators$/perplexity_api.js",
-          "md5": "a99f7412d6a9c36118af0282aa969825",
-          "size": 3012
+          "md5": "6dc19e6202f55e92946c385f84fd4698",
+          "size": 3135
         }
       ]
     },
@@ -2882,8 +2882,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/togetherai_api.js",
           "path": "$translators$/togetherai_api.js",
-          "md5": "a0119d64482b8920365048ba400e2670",
-          "size": 3098
+          "md5": "fca1c42c06d5b6f827f06f211911de8a",
+          "size": 3221
         }
       ]
     },
@@ -2892,8 +2892,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/xai_api.js",
           "path": "$translators$/xai_api.js",
-          "md5": "1cf2052db8e9e6ee8aa26cf06dd6b4b4",
-          "size": 2888
+          "md5": "5ad0c890ebb315e5f623a6722b9c291f",
+          "size": 3011
         }
       ]
     },
@@ -2902,8 +2902,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/yandex.js",
           "path": "$translators$/yandex.js",
-          "md5": "f05ac9945ba8a7ca00fd1acc1bdcad36",
-          "size": 1720
+          "md5": "498300f2ef705447da1bc7f1c0318f1b",
+          "size": 1741
         }
       ]
     }

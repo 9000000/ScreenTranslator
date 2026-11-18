@@ -1,4 +1,5 @@
 #include "commonmodels.h"
+#include "languagecodes.h"
 #include "settings.h"
 #include "tesseract.h"
 #include "translator.h"
@@ -17,6 +18,8 @@ void CommonModels::update(const QString &tessdataPath,
   {
     auto names = Tesseract::availableLanguageNames(tessdataPath);
     std::sort(names.begin(), names.end());
+    if (!names.isEmpty())
+      names.prepend(LanguageCodes::name(LanguageCodes::autoLanguageId()));
     sourceLanguageModel_->setStringList(names);
   }
 

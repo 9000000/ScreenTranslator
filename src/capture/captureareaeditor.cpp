@@ -60,9 +60,13 @@ CaptureAreaEditor::~CaptureAreaEditor() = default;
 
 void CaptureAreaEditor::swapLanguages()
 {
+  const auto src = sourceLanguage_->currentText();
   const auto target = targetLanguage_->currentText();
-  targetLanguage_->setCurrentText(sourceLanguage_->currentText());
   sourceLanguage_->setCurrentText(target);
+  if (!LanguageCodes::isAuto(LanguageCodes::idForName(src)) &&
+      !src.contains(QLatin1Char('+'))) {
+    targetLanguage_->setCurrentText(src);
+  }
 }
 
 void CaptureAreaEditor::set(const CaptureArea &area)

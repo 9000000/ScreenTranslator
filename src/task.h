@@ -22,6 +22,7 @@ public:
   bool useHunspell{false};
 
   LanguageId sourceLanguage;
+  LanguageId detectedLanguage;
   LanguageId targetLanguage;
 
   QStringList translators;

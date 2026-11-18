@@ -108,6 +108,7 @@ void SubstitutionsTable::setSubstitutions(const Substitutions &substitutions)
 void SubstitutionsTable::updateModel(const Substitutions &substitutions)
 {
   auto strings = sourceLanguages_->stringList();
+  strings.removeAll(LanguageCodes::name(LanguageCodes::autoLanguageId()));
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
   QSet<QString> uniqueStrings = QSet<QString>::fromList(strings);

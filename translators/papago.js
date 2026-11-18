@@ -46,7 +46,7 @@ function translate(text, from, to) {
     let supported = ['ko', 'ru', 'en', 'fr', 'pt', 'th', 'ja',
         'zh-CN', 'zh-TW', 'de', 'it', 'id', 'es', 'vi', 'hi'];
 
-    if (from && supported.indexOf(from) === -1) {
+    if (from && from !== 'auto' && supported.indexOf(from) === -1) {
         proxy.setFailed('Source language (' + from + ') not supported by Papago');
         return;
     }
@@ -58,7 +58,7 @@ function translate(text, from, to) {
     lastText = getText();
     active = true;
     let targetLang = to;
-    let srcLang = from ? from : 'auto';
+    let srcLang = (from && from !== 'auto') ? from : 'auto';
     let langs = '?sk=' + srcLang + '&tk=' + targetLang + '&';
 
     if (window.location.href.indexOf('papago.naver.com') !== -1

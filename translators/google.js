@@ -40,6 +40,7 @@ function translate(text, from, to) {
     let tl = to ? to : 'en';
 
     if (window.location.href.indexOf('translate.google') !== -1
+        && window.location.href.indexOf('sl=' + sl) !== -1
         && window.location.href.indexOf('tl=' + tl) !== -1) {
         var input = document.querySelector('textarea.er8xn') || document.querySelector('textarea[aria-label="Source text"]') || document.querySelector('textarea[jsname="BJE2fc"]');
         if (input) {

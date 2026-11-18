@@ -53,7 +53,7 @@ function translate(text, from, to) {
         'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'tr', 'uk', 'zh'
     ];
 
-    if (from && supported.indexOf(from) === -1) {
+    if (from && from !== 'auto' && supported.indexOf(from) === -1) {
         proxy.setFailed('Source language (' + from + ') not supported by DeepL');
         return;
     }
@@ -64,7 +64,7 @@ function translate(text, from, to) {
 
     active = true;
     var singleLineText = text.replace(/(?:\r\n|\r|\n)/g, ' ');
-    let srcLang = from ? from : 'auto';
+    let srcLang = (from && from !== 'auto') ? from : 'auto';
     let langs = srcLang + '/' + to + '/';
 
     if (window.location.href.indexOf('deepl.com/translator') !== -1

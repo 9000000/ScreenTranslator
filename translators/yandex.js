@@ -40,7 +40,7 @@ function translate(text, from, to) {
     }
 
     active = true;
-    let langs = from ? ('lang=' + from + '-' + to) : ('lang=' + to);
+    let langs = (from && from !== 'auto') ? ('lang=' + from + '-' + to) : ('lang=' + to);
     let url = 'https://translate.yandex.ru/?' + langs + '&text=' + encodeURIComponent(text);
 
     if (window.location.href === url) {

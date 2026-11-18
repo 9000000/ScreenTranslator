@@ -123,7 +123,22 @@ SettingsEditor::SettingsEditor(Manager &manager, update::Updater &updater)
   }
 
   // recognition
-  // recognition languages handled by tesseractLangList
+  connect(ui->tesseractLangList, &QListWidget::itemChanged, this,
+          [this](QListWidgetItem *changed) {
+            if (!changed || changed->checkState() != Qt::Checked)
+              return;
+            QSignalBlocker blocker(ui->tesseractLangList);
+            const auto autoName =
+                LanguageCodes::name(LanguageCodes::autoLanguageId());
+            const bool isAutoItem = (changed->text() == autoName);
+            for (int i = 0, end = ui->tesseractLangList->count(); i < end; ++i) {
+              auto item = ui->tesseractLangList->item(i);
+              if (item == changed)
+                continue;
+              if (isAutoItem || item->text() == autoName)
+                item->setCheckState(Qt::Unchecked);
+            }
+          });
 
   // correction
   ui->userSubstitutionsTable->setEnabled(ui->useUserSubstitutions->isChecked());
@@ -396,21 +411,28 @@ void SettingsEditor::updateCurrentPage()
 
 void SettingsEditor::updateTesseractLanguages(const QString &sourceLanguage)
 {
+  QSignalBlocker blocker(ui->tesseractLangList);
   ui->tesseractLangList->clear();
   const auto availableNames = models_.sourceLanguageModel()->stringList();
   if (availableNames.isEmpty())
     return;
 
-  const auto selectedIds =
-      sourceLanguage.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+  const auto autoName = LanguageCodes::name(LanguageCodes::autoLanguageId());
   QStringList selectedNames;
-  for (const auto &id : selectedIds) {
-    const auto name = LanguageCodes::name(id.trimmed());
-    if (availableNames.contains(name))
-      selectedNames.append(name);
+  if (LanguageCodes::isAuto(sourceLanguage)) {
+    selectedNames.append(autoName);
+  } else {
+    const auto selectedIds =
+        sourceLanguage.split(QLatin1Char('+'), Qt::SkipEmptyParts);
+    for (const auto &id : selectedIds) {
+      const auto name = LanguageCodes::name(id.trimmed());
+      if (availableNames.contains(name) && name != autoName)
+        selectedNames.append(name);
+    }
   }
 
-  QStringList all = selectedNames;
+  QStringList all{autoName};
+  all += selectedNames;
   all += availableNames;
   all.removeDuplicates();
   ui->tesseractLangList->addItems(all);
@@ -485,6 +507,8 @@ QString SettingsEditor::enabledTesseractLanguages() const
     auto item = ui->tesseractLangList->item(i);
     if (item->checkState() == Qt::Checked) {
       const auto id = LanguageCodes::idForName(item->text());
+      if (LanguageCodes::isAuto(id))
+        return LanguageCodes::autoLanguageId();
       if (!id.isEmpty())
         result.append(id);
     }
@@ -507,7 +531,7 @@ void SettingsEditor::updateModels()
 {
   const auto selected = enabledTesseractLanguages();
   models_.update(ui->tessdataPath->text(), ui->translatorsPath->text());
-  updateTesseractLanguages(selected.isEmpty() ? QStringLiteral("eng")
+  updateTesseractLanguages(selected.isEmpty() ? LanguageCodes::autoLanguageId()
                                               : selected);
 }
 

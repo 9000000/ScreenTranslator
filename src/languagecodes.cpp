@@ -145,6 +145,7 @@ const std::unordered_map<LanguageId, LanguageCodes::Bundle>
   {I("chi_tra"), {I("chi_tra"), S("zh-TW"), S("chi_tra"), QT_TRANSLATE_NOOP("QObject", "Chinese (Traditional)")}},
   {I("chi_tra_vert"), {I("chi_tra_vert"), S("zh-TW"), S("chi_tra_vert"), QT_TRANSLATE_NOOP("QObject", "Chinese (Traditional) vertical")}},
   {I("any"), {I("any"), S("auto"), S(""), QT_TRANSLATE_NOOP("QObject", "Any")}},
+  {I("auto"), {I("auto"), S("auto"), S(""), QT_TRANSLATE_NOOP("QObject", "Auto")}},
         // clang-format on
     };
 #undef I
@@ -250,92 +251,238 @@ std::vector<LanguageId> LanguageCodes::allIds()
 
 LanguageId LanguageCodes::anyLanguageId()
 {
-  return "any";
+  return QStringLiteral("any");
+}
+
+LanguageId LanguageCodes::autoLanguageId()
+{
+  return QStringLiteral("auto");
+}
+
+bool LanguageCodes::isAuto(const LanguageId &id)
+{
+  return id == QLatin1String("auto") || id == QLatin1String("any");
 }
 
 namespace
 {
-bool isVietnameseText(const QString &text)
+struct TextStats {
+  int nonSpace{0};
+  int lettersOrDigits{0};
+  int letters{0};
+  int latin{0};
+  int nonAsciiLetters{0};
+  int cyrillic{0};
+  int han{0};
+  int kana{0};
+  int hangul{0};
+  int arabic{0};
+  int thai{0};
+  int greek{0};
+  int hebrew{0};
+  int devanagari{0};
+  int otherScript{0};
+  bool vietnamese{false};
+};
+
+TextStats analyzeText(const QString &text)
 {
   static const QString vietnameseChars = QString::fromUtf8(
       "àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ"
       "ÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ"
       "đĐ");
-  for (const auto &ch : text) {
-    if (vietnameseChars.contains(ch))
-      return true;
-  }
-  return false;
-}
 
-bool isMatchingScriptOrLanguage(const QString &text, const LanguageId &lang)
-{
-  const auto iso = LanguageCodes::iso639_1(lang);
-  if (iso == QLatin1String("vi") || lang.startsWith(QLatin1String("vie"))) {
-    return isVietnameseText(text);
-  }
-
-  int scriptCount = 0;
-  int letterCount = 0;
+  TextStats s;
   for (const auto &ch : text) {
+    if (ch.isSpace())
+      continue;
+    ++s.nonSpace;
+    if (ch.isLetterOrNumber())
+      ++s.lettersOrDigits;
     if (!ch.isLetter())
       continue;
-    ++letterCount;
-    const auto script = ch.script();
-    if (iso == QLatin1String("ru") || iso == QLatin1String("uk") ||
-        iso == QLatin1String("be") || iso == QLatin1String("bg")) {
-      if (script == QChar::Script_Cyrillic)
-        ++scriptCount;
-    } else if (iso == QLatin1String("ja") ||
-               lang.startsWith(QLatin1String("jpn"))) {
-      if (script == QChar::Script_Hiragana || script == QChar::Script_Katakana)
-        return true;
-    } else if (iso == QLatin1String("ko") ||
-               lang.startsWith(QLatin1String("kor"))) {
-      if (script == QChar::Script_Hangul)
-        return true;
-    } else if (iso == QLatin1String("zh") ||
-               lang.startsWith(QLatin1String("chi"))) {
-      if (script == QChar::Script_Han)
-        ++scriptCount;
-    } else if (iso == QLatin1String("ar")) {
-      if (script == QChar::Script_Arabic)
-        ++scriptCount;
-    } else if (iso == QLatin1String("th")) {
-      if (script == QChar::Script_Thai)
-        ++scriptCount;
+
+    ++s.letters;
+    if (ch.unicode() > 127) {
+      ++s.nonAsciiLetters;
+      if (!s.vietnamese && vietnameseChars.contains(ch))
+        s.vietnamese = true;
+    }
+
+    switch (ch.script()) {
+      case QChar::Script_Latin: ++s.latin; break;
+      case QChar::Script_Cyrillic: ++s.cyrillic; break;
+      case QChar::Script_Han: ++s.han; break;
+      case QChar::Script_Hiragana:
+      case QChar::Script_Katakana: ++s.kana; break;
+      case QChar::Script_Hangul: ++s.hangul; break;
+      case QChar::Script_Arabic: ++s.arabic; break;
+      case QChar::Script_Thai: ++s.thai; break;
+      case QChar::Script_Greek: ++s.greek; break;
+      case QChar::Script_Hebrew: ++s.hebrew; break;
+      case QChar::Script_Devanagari: ++s.devanagari; break;
+      default: ++s.otherScript; break;
     }
   }
+  return s;
+}
 
-  if (letterCount > 0 && scriptCount > letterCount / 3)
+bool isCyrillicLanguage(const LanguageId &langId, const QString &iso)
+{
+  if (langId == QLatin1String("srp_latn"))
+    return false;
+  if (langId.endsWith(QLatin1String("_cyrl")))
     return true;
+  return iso == QLatin1String("ru") || iso == QLatin1String("uk") ||
+         iso == QLatin1String("be") || iso == QLatin1String("bg") ||
+         iso == QLatin1String("sr") || iso == QLatin1String("mk") ||
+         iso == QLatin1String("kk") || iso == QLatin1String("ky") ||
+         iso == QLatin1String("mn") || iso == QLatin1String("tg") ||
+         iso == QLatin1String("tt");
+}
 
-  return false;
+bool isArabicScriptLanguage(const QString &iso)
+{
+  return iso == QLatin1String("ar") || iso == QLatin1String("fa") ||
+         iso == QLatin1String("ur") || iso == QLatin1String("ps") ||
+         iso == QLatin1String("ug") || iso == QLatin1String("sd");
+}
+
+bool isDevanagariLanguage(const QString &iso)
+{
+  return iso == QLatin1String("hi") || iso == QLatin1String("mr") ||
+         iso == QLatin1String("ne") || iso == QLatin1String("sa");
 }
 }  // namespace
 
-LanguageId LanguageCodes::resolveTargetLanguage(const QString &text,
-                                               const LanguageId &sourceLang,
-                                               const LanguageId &targetLang)
+bool LanguageCodes::isSameLanguage(const QString &text,
+                                   const LanguageId &detectedSourceLang,
+                                   const LanguageId &targetLang)
 {
   if (text.trimmed().isEmpty() || targetLang.isEmpty())
-    return targetLang;
+    return false;
 
-  if (isMatchingScriptOrLanguage(text, targetLang)) {
-    const auto srcParts =
-        sourceLang.split(QLatin1Char('+'), Qt::SkipEmptyParts);
-    for (const auto &part : srcParts) {
-      const auto trimmed = part.trimmed();
-      if (iso639_1(trimmed) != iso639_1(targetLang)) {
-        return trimmed;
-      }
-    }
-    if (iso639_1(targetLang) == QLatin1String("vi"))
-      return QStringLiteral("eng");
-    return QStringLiteral("vie");
+  const auto s = analyzeText(text);
+  if (s.letters == 0)
+    return false;
+
+  const auto targetIso = iso639_1(targetLang);
+  const auto sourceIso = detectedSourceLang.isEmpty()
+                             ? QStringLiteral("auto")
+                             : iso639_1(detectedSourceLang);
+  const bool sameOrAutoSource =
+      (sourceIso == targetIso || sourceIso == QLatin1String("auto"));
+
+  if (targetIso == QLatin1String("vi"))
+    return s.vietnamese;
+
+  if (targetIso == QLatin1String("ja")) {
+    if (s.kana > 0)
+      return true;
+    return s.han > s.letters / 2 && sourceIso == QLatin1String("ja");
   }
 
-  return targetLang;
+  if (targetIso == QLatin1String("ko"))
+    return s.hangul > s.letters / 3;
+
+  if (targetIso.startsWith(QLatin1String("zh"))) {
+    if (s.kana > 0 || s.hangul > 0)
+      return false;
+    if (s.han > s.letters / 3)
+      return !sourceIso.startsWith(QLatin1String("zh")) ||
+             sourceIso == targetIso;
+    return false;
+  }
+
+  if (isCyrillicLanguage(targetLang, targetIso))
+    return s.cyrillic > s.letters / 3 && sameOrAutoSource;
+
+  if (isArabicScriptLanguage(targetIso))
+    return s.arabic > s.letters / 3 && sameOrAutoSource;
+
+  if (targetIso == QLatin1String("th"))
+    return s.thai > s.letters / 3;
+
+  if (targetIso == QLatin1String("el"))
+    return s.greek > s.letters / 3;
+
+  if (targetIso == QLatin1String("he") || targetIso == QLatin1String("yi"))
+    return s.hebrew > s.letters / 3 && sameOrAutoSource;
+
+  if (isDevanagariLanguage(targetIso))
+    return s.devanagari > s.letters / 3 && sameOrAutoSource;
+
+  if (targetIso == QLatin1String("en")) {
+    return sourceIso == QLatin1String("en") && s.latin == s.letters &&
+           s.nonAsciiLetters == 0;
+  }
+
+  // ponytail: heuristic Latin match using OCR winning language; full NLP langid unnecessary here
+  return sourceIso == targetIso && s.latin > (s.letters * 2) / 3 &&
+         !s.vietnamese;
 }
+
+double LanguageCodes::scoreRecognizedText(const QString &text,
+                                          const LanguageId &langId,
+                                          int confidence,
+                                          const QSize &imageSize)
+{
+  if (text.trimmed().isEmpty() || confidence <= 0)
+    return -1.0;
+
+  const auto s = analyzeText(text);
+  if (s.nonSpace == 0 || s.lettersOrDigits == 0)
+    return 0.0;
+
+  const double validRatio = double(s.lettersOrDigits) / double(s.nonSpace);
+  double score = double(confidence) * (0.5 + 0.5 * validRatio);
+
+  const auto iso = iso639_1(langId);
+  if (iso == QLatin1String("vi")) {
+    if (s.vietnamese && confidence >= 70)
+      score += 5.0;
+    else if (!s.vietnamese)
+      score -= 1.5;
+  } else if (iso == QLatin1String("ja")) {
+    if (s.kana > 0 && confidence >= 65)
+      score += 5.0;
+    else if (s.kana == 0 && s.han == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (iso.startsWith(QLatin1String("zh"))) {
+    if (s.han == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (iso == QLatin1String("ko")) {
+    if (s.hangul == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (isCyrillicLanguage(langId, iso)) {
+    if (s.cyrillic == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (isArabicScriptLanguage(iso)) {
+    if (s.arabic == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (iso == QLatin1String("th")) {
+    if (s.thai == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (iso == QLatin1String("el")) {
+    if (s.greek == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (iso == QLatin1String("he") || iso == QLatin1String("yi")) {
+    if (s.hebrew == 0 && s.letters > 0)
+      score -= 4.0;
+  } else if (isDevanagariLanguage(iso)) {
+    if (s.devanagari == 0 && s.letters > 0)
+      score -= 4.0;
+  }
+
+  if (langId.endsWith(QLatin1String("_vert")) && imageSize.isValid()) {
+    if (imageSize.width() > imageSize.height() * 1.2)
+      score -= 10.0;
+    else if (imageSize.height() > imageSize.width() * 1.5)
+      score += 3.0;
+  }
+
+  return score;
+}
+
 
 

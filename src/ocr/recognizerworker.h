@@ -19,9 +19,11 @@ signals:
   void finished(const TaskPtr &task);
 
 private:
+  Tesseract *ensureEngine(const LanguageId &language, QString *initError);
   void removeUnused(Generation current);
 
   std::map<QString, std::unique_ptr<Tesseract>> engines_;
   std::map<QString, Generation> lastGenerations_;
+  LanguageId lastDetectedLanguage_;
   QString tessdataPath_;
 };

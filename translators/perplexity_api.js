@@ -17,7 +17,8 @@ function translate(text, from, to) {
         return;
     }
 
-    const systemPrompt = `You are a professional translator. Translate the provided text from ${from} to ${to}. Preserve original formatting, line breaks, and punctuation. Output ONLY the translated text without explanations, greetings, quotes, citations, or markdown code blocks.`;
+    const sourceClause = (!from || from === 'auto') ? 'automatically detecting the source language' : `from ${from}`;
+    const systemPrompt = `You are a professional translator. Translate the provided text ${sourceClause} into ${to}. Preserve original formatting, line breaks, and punctuation. Output ONLY the translated text without explanations, greetings, quotes, citations, or markdown code blocks.`;
 
     const requestBody = {
         model: MODEL,

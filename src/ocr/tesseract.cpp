@@ -241,7 +241,7 @@ const QString &Tesseract::error() const
   return error_;
 }
 
-QStringList Tesseract::availableLanguageNames(const QString &path)
+LanguageIds Tesseract::availableLanguageIds(const QString &path)
 {
   if (path.isEmpty())
     return {};
@@ -250,42 +250,62 @@ QStringList Tesseract::availableLanguageNames(const QString &path)
   if (!dir.exists())
     return {};
 
-  LanguageIds names;
-
+  LanguageIds ids;
   const auto files = dir.entryList({"*.traineddata"}, QDir::Files);
   for (const auto &file : files) {
-    const auto lang = file.left(file.indexOf("."));
-    const auto name = LanguageCodes::name(LanguageCodes::idForTesseract(lang));
-    names.append(name);
+    const auto lang = file.left(file.indexOf('.'));
+    if (lang == QLatin1String("osd") || lang == QLatin1String("equ"))
+      continue;
+    ids.append(LanguageCodes::idForTesseract(lang));
   }
+  return ids;
+}
 
-  if (names.isEmpty())
-    return {};
-
+QStringList Tesseract::availableLanguageNames(const QString &path)
+{
+  const auto ids = availableLanguageIds(path);
+  QStringList names;
+  names.reserve(ids.size());
+  for (const auto &id : ids) {
+    names.append(LanguageCodes::name(id));
+  }
   return names;
 }
 
-QString Tesseract::recognize(const QPixmap &source)
+Tesseract::PreparedImage Tesseract::prepare(const QPixmap &source)
+{
+  SOFT_ASSERT(!source.isNull(), return {});
+  Pix *raw = prepareImage(source.toImage());
+  SOFT_ASSERT(raw, return {});
+  LTRACE() << "Preprocessed Pix for OCR" << raw;
+  return std::shared_ptr<void>(raw, [](void *p) {
+    auto pix = static_cast<Pix *>(p);
+    if (pix)
+      pixDestroy(&pix);
+  });
+}
+
+QString Tesseract::recognize(const PreparedImage &image, int *confidence)
 {
   SOFT_ASSERT(api_, return {});
-  SOFT_ASSERT(!source.isNull(), return {});
+  SOFT_ASSERT(image, return {});
 
   error_.clear();
 
-  PixGuard image(prepareImage(source.toImage()));
-  SOFT_ASSERT(image, return {});
-  LTRACE() << "Preprocessed Pix for OCR" << image;
-
-  api_->SetImage(image);
+  api_->SetImage(static_cast<Pix *>(image.get()));
   LTRACE() << "Set Pix to engine";
 
   const auto outText = api_->GetUTF8Text();
-  LTRACE() << "Received recognized text";
+  const int conf = api_->MeanTextConf();
+  if (confidence)
+    *confidence = conf;
+  LTRACE() << "Received recognized text, conf=" << conf;
 
   api_->Clear();
   LTRACE() << "Cleared engine";
 
-  const auto result = QString(outText).trimmed();
+  const auto result =
+      outText ? QString::fromUtf8(outText).trimmed() : QString();
 
   delete[] outText;
   LTRACE() << "Cleared recognized text buffer";
@@ -293,6 +313,16 @@ QString Tesseract::recognize(const QPixmap &source)
   if (result.isEmpty())
     error_ = QObject::tr("Failed to recognize text or no text selected");
   return result;
+}
+
+QString Tesseract::recognize(const QPixmap &source, int *confidence)
+{
+  SOFT_ASSERT(api_, return {});
+  SOFT_ASSERT(!source.isNull(), return {});
+
+  const auto image = prepare(source);
+  SOFT_ASSERT(image, return {});
+  return recognize(image, confidence);
 }
 
 bool Tesseract::isValid() const

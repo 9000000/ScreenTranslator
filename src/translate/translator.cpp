@@ -110,6 +110,17 @@ void Translator::translate(const TaskPtr &task)
     return;
   }
 
+  const auto effectiveSource = task->detectedLanguage.isEmpty()
+                                   ? task->sourceLanguage
+                                   : task->detectedLanguage;
+  if (LanguageCodes::isSameLanguage(task->corrected, effectiveSource,
+                                    task->targetLanguage)) {
+    LTRACE() << "Source text matches target language. Skipping translation";
+    task->translated.clear();
+    manager_.translated(task);
+    return;
+  }
+
   queue_.push_back(task);
   processQueue();
 }
@@ -322,8 +333,11 @@ QStringList Translator::availableLanguageNames()
   QStringList names;
 
   for (const auto &id : LanguageCodes::allIds()) {
+    if (LanguageCodes::isAuto(id))
+      continue;
     const auto iso = LanguageCodes::iso639_1(id);
-    if (!iso.isEmpty())
+    if (!iso.isEmpty() && iso != QLatin1String("auto") &&
+        iso != QLatin1String("osd"))
       names.append(LanguageCodes::name(id));
   }
 
