@@ -22,6 +22,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QStandardItemModel>
+#include <QStyle>
 #include <QStyleOptionButton>
 #include <QStyledItemDelegate>
 #include <QTimer>
@@ -66,7 +67,7 @@ QRegularExpression fieldRegex(const QString &varName)
 {
   return QRegularExpression(
       QStringLiteral(
-          R"(^([ \t]*(?:const|let|var)[ \t]+%1[ \t]*=[ \t]*)(['"])((?:\\.|(?!\2).)*)(\2)([ \t]*;[ \t]*)(.*)$)")
+          R"re(^([ \t]*(?:const|let|var)[ \t]+%1[ \t]*=[ \t]*)(['"])((?:\\.|(?!\2).)*)(\2)([ \t]*;[ \t]*)(.*)$)re")
           .arg(varName),
       QRegularExpression::MultilineOption);
 }
