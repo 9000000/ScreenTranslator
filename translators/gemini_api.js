@@ -36,6 +36,10 @@ function extractInteractionText(data) {
         }
     }
 
+    if (typeof data.output_text === 'string' && data.output_text.trim()) {
+        return data.output_text.trim();
+    }
+
     return '';
 }
 
@@ -69,8 +73,7 @@ function translate(text, from, to) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': API_KEY,
-            'Api-Revision': '2026-05-20'
+            'x-goog-api-key': API_KEY
         },
         body: JSON.stringify(requestBody)
     })
@@ -79,8 +82,9 @@ function translate(text, from, to) {
             let errorDetail = response.statusText;
             try {
                 const errJson = await response.json();
-                if (errJson && errJson.error && errJson.error.message) {
-                    errorDetail = errJson.error.message;
+                const errObj = Array.isArray(errJson) ? errJson[0] : errJson;
+                if (errObj && errObj.error && errObj.error.message) {
+                    errorDetail = errObj.error.message;
                 }
             } catch (e) {}
             console.error('Error from Gemini API:', response.status, errorDetail);
