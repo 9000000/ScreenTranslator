@@ -2802,8 +2802,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/google.js",
           "path": "$translators$/google.js",
-          "md5": "ec641a042ff4dcf9a4c6c0f5923c7bf1",
-          "size": 2199
+          "md5": "213df840bd591266ab847a06c551c2c9",
+          "size": 4260
         }
       ]
     },
@@ -2812,8 +2812,8 @@
         {
           "url": "https://raw.githubusercontent.com/9000000/ScreenTranslator/master/translators/google_api.js",
           "path": "$translators$/google_api.js",
-          "md5": "bd98bb393700d00e8fc465f3c9b4f1fa",
-          "size": 1932
+          "md5": "bd6805b8e827a036c6166943c92828e1",
+          "size": 6624
         }
       ]
     },
