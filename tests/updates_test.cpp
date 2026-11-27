@@ -310,7 +310,7 @@ TEST(UpdateInstaller, ExtractArchiveRejectsZipSlip)
 TEST(UpdateModel, AppZipVersionComparison)
 {
   const auto prevVer = QCoreApplication::applicationVersion();
-  QCoreApplication::setApplicationVersion("4.3.2");
+  QCoreApplication::setApplicationVersion("1.0.0");
 
   const QString fakeDir = QDir::currentPath() + "/test_appdir";
   QDir(fakeDir).mkpath(".");
@@ -321,9 +321,9 @@ TEST(UpdateModel, AppZipVersionComparison)
     "version": 1,
     "app": {
       "current": {
-        "version": "4.3.0",
+        "version": "2.0.0",
         "files": [{
-          "url": "https://example.com/ScreenTranslator-4.3.0-win64.zip",
+          "url": "https://example.com/ScreenTranslator-2.0.0-win64.zip",
           "path": "$appdir$/screen-translator.exe",
           "md5": "deadbeef"
         }]
