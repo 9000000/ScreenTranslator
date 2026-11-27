@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QSignalSpy>
+#include <QSortFilterProxyModel>
 
 #include <cstring>
 
@@ -332,9 +333,14 @@ TEST(UpdateModel, AppZipVersionComparison)
 
   Updater updater({});
   Model testee(updater);
+  QSortFilterProxyModel proxy;
+  proxy.setSourceModel(&testee);
   testee.setExpansions({{"$appdir$", fakeDir}});
   ASSERT_TRUE(testee.parse(updates).isEmpty());
   ASSERT_TRUE(testee.hasUpdates());
+  ASSERT_EQ(1, proxy.rowCount());
+  const auto proxyApp = proxy.index(0, 0);
+  ASSERT_EQ(1, proxy.rowCount(proxyApp));
 
   const auto app = testee.index(0, 0, {});
   const auto comp = testee.index(0, 0, app);

@@ -669,8 +669,14 @@ void SettingsEditor::updateCurrentPage()
   if (ui->pagesView->currentWidget() != ui->pageUpdate)
     return;
 
-  if (ui->updatesView->model()->rowCount() == 0)
+  if (ui->updatesView->model() && ui->updatesView->model()->rowCount() == 0 &&
+      ui->checkUpdates->isEnabled()) {
+    ui->checkUpdates->setEnabled(false);
+    ui->updateStatusLabel->setStyleSheet(QString());
+    ui->updateStatusLabel->setText(tr("Checking for updates..."));
+    ui->updateStatusLabel->setVisible(true);
     updater_.checkForUpdates();
+  }
 }
 
 void SettingsEditor::updateTesseractLanguages(const QString &sourceLanguage)

@@ -176,12 +176,12 @@ QString Model::parse(const QByteArray &data)
     return tr("Wrong updates version: %1").arg(version);
   }
 
+  auto parsed = parse(json);
+
   beginResetModel();
-
-  root_ = parse(json);
+  root_ = std::move(parsed);
   if (root_)
-    updateStates();
-
+    updateStates(false);
   endResetModel();
 
   if (!root_)
@@ -338,12 +338,12 @@ void Model::invalidate(const File &fileToInvalidate)
   visitor(*root_, visitor);
 }
 
-void Model::updateStates()
+void Model::updateStates(bool emitSignals)
 {
   if (!root_)
     return;
 
-  auto visitor = [this](Component &component, auto v) -> void {
+  auto visitor = [this, emitSignals](Component &component, auto v) -> void {
     if (!component.files.empty()) {
       component.state = State::Actual;
       for (auto &file : component.files) {
@@ -353,8 +353,10 @@ void Model::updateStates()
           file.state = currentState(file);
         component.state = std::min(component.state, file.state.value());
       }
-      auto index = toIndex(component, int(Column::State));
-      emit dataChanged(index, index, {Qt::DisplayRole});
+      if (emitSignals) {
+        auto index = toIndex(component, int(Column::State));
+        emit dataChanged(index, index, {Qt::DisplayRole});
+      }
 
     } else if (!component.children.empty()) {
       for (auto &child : component.children) v(*child, v);
@@ -493,15 +495,19 @@ QModelIndex Model::toIndex(const Model::Component &component, int column) const
 
 QModelIndex Model::index(int row, int column, const QModelIndex &parent) const
 {
-  if (!root_)
+  if (!root_ || row < 0 || column < 0 || column >= int(Column::Count))
     return {};
 
-  if (auto ptr = toComponent(parent)) {
-    SOFT_ASSERT(row >= 0 && row < int(ptr->children.size()), return {});
+  if (parent.isValid()) {
+    if (parent.column() > 0)
+      return {};
+    auto ptr = toComponent(parent);
+    if (!ptr || row >= int(ptr->children.size()))
+      return {};
     return toIndex(*ptr->children[row], column);
   }
 
-  if (row < 0 || row >= int(root_->children.size()))
+  if (row >= int(root_->children.size()))
     return {};
 
   return toIndex(*root_->children[row], column);
@@ -519,8 +525,11 @@ QModelIndex Model::parent(const QModelIndex &child) const
 
 int Model::rowCount(const QModelIndex &parent) const
 {
-  if (auto ptr = toComponent(parent)) {
-    return int(ptr->children.size());
+  if (parent.isValid()) {
+    if (parent.column() > 0)
+      return 0;
+    auto ptr = toComponent(parent);
+    return ptr ? int(ptr->children.size()) : 0;
   }
   return root_ ? int(root_->children.size()) : 0;
 }
@@ -569,6 +578,9 @@ QVariant Model::data(const QModelIndex &index, int role) const
 
 Qt::ItemFlags Model::flags(const QModelIndex &index) const
 {
+  if (!index.isValid())
+    return Qt::NoItemFlags;
+
   auto ptr = toComponent(index);
   SOFT_ASSERT(ptr, return {});
   auto result = Qt::NoItemFlags | Qt::ItemIsSelectable;

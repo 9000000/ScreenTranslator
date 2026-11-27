@@ -50,7 +50,7 @@ public:
   QString parse(const QByteArray& data);
   void setExpansions(const QHash<QString, QString>& expansions);
   void invalidate(const File& file);
-  void updateStates();
+  void updateStates(bool emitSignals = true);
   bool hasUpdates() const;
   void updateProgress(const QUrl& url, int progress);
   void selectAllUpdates();
