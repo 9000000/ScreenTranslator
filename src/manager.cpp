@@ -165,6 +165,7 @@ void Manager::setupUpdates(const Settings &settings)
       {"$appdir$", QApplication::applicationDirPath()},
   });
 
+  updater_->setIgnoreSslErrors(settings.ignoreSslErrors);
   updater_->setAutoUpdate(settings.autoUpdateIntervalDays,
                           settings.lastUpdateCheck);
 }

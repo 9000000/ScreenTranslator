@@ -2,6 +2,7 @@ import common as c
 from config import *
 import os
 import sys
+import json
 import shutil
 from glob import glob
 
@@ -65,4 +66,17 @@ open(os.path.join(install_dir, 'qt.conf'), 'a').close() # fix for non-latin path
 c.archive(c.get_folder_files(os.path.relpath(install_dir)), artifact_path)
 
 bin_path = install_dir + '\\' + bin_name + '.exe'
-c.print('>> Md5 {} {}'.format(bin_path, c.md5sum(bin_path)))
+bin_md5 = c.md5sum(bin_path)
+c.print('>> Md5 {} {}'.format(bin_path, bin_md5))
+
+meta = {
+    'host': os_name,
+    'version': app_version,
+    'artifact': artifact_name,
+    'md5': bin_md5,
+    'size': os.path.getsize(artifact_path) if os.path.exists(artifact_path) else 0,
+}
+meta_path = os.path.join(pwd, '{}-meta.json'.format(os_name))
+with open(meta_path, 'w', encoding='utf-8') as f:
+    json.dump(meta, f, indent=2)
+c.print('>> Wrote metadata {}'.format(meta_path))

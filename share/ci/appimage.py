@@ -2,6 +2,7 @@ import common as c
 from config import *
 import os
 import sys
+import json
 import subprocess as sub
 import shutil
 from glob import glob
@@ -31,6 +32,7 @@ c.run('chmod a+x {}'.format(linuxdeployqt_original))
 linuxdeployqt_bin = os.path.abspath('linuxdeployqt')
 c.symlink(linuxdeployqt_original, linuxdeployqt_bin)
 
+pwd = os.getcwd()
 os.chdir(build_dir)
 
 install_dir = os.path.abspath('appdir')
@@ -66,4 +68,17 @@ c.run('{} {}/usr/share/applications/*.desktop {} -appimage -qmake={}/bin/qmake'.
 c.run('mv {}-{}*.AppImage "{}"'.format(app_name, app_version, artifact_path))
 
 bin_path = install_dir + '/usr/bin/' + bin_name
-c.print('>> Md5 {} {}'.format(bin_path, c.md5sum(bin_path)))
+bin_md5 = c.md5sum(bin_path)
+c.print('>> Md5 {} {}'.format(bin_path, bin_md5))
+
+meta = {
+    'host': os_name,
+    'version': app_version,
+    'artifact': artifact_name,
+    'md5': bin_md5,
+    'size': os.path.getsize(artifact_path) if os.path.exists(artifact_path) else 0,
+}
+meta_path = os.path.join(pwd, '{}-meta.json'.format(os_name))
+with open(meta_path, 'w', encoding='utf-8') as f:
+    json.dump(meta, f, indent=2)
+c.print('>> Wrote metadata {}'.format(meta_path))

@@ -6,6 +6,7 @@
       "host": "win64",
       "files": [
         {
+          "url": "https://github.com/9000000/ScreenTranslator/releases/download/v4.2.0/ScreenTranslator-4.2.0-win64.zip",
           "path": "$appdir$/screen-translator.exe",
           "md5": "3f2c3c27364f25c239ea63243a8910a3"
         }
@@ -16,6 +17,7 @@
       "host": "linux",
       "files": [
         {
+          "url": "https://github.com/9000000/ScreenTranslator/releases/download/v4.2.0/ScreenTranslator-4.2.0.AppImage",
           "path": "$appdir$/screen-translator",
           "md5": "a091be0443fd128a02b01b313e0270bc"
         }

@@ -420,10 +420,37 @@ SettingsEditor::SettingsEditor(Manager &manager, update::Updater &updater)
   // updates
   ui->updatesView->header()->setObjectName("updatesHeader");
   updater_.initView(ui->updatesView);
+  ui->updateStatusLabel->setVisible(false);
   connect(&updater_, &update::Updater::updated,  //
           this, &SettingsEditor::updateState);
-  connect(ui->checkUpdates, &QPushButton::clicked,  //
-          &updater_, &update::Updater::checkForUpdates);
+  connect(&updater_, &update::Updater::checkedForUpdates, this, [this] {
+    ui->checkUpdates->setEnabled(true);
+    ui->updateStatusLabel->setStyleSheet(QString());
+    ui->updateStatusLabel->setText(updater_.hasUpdates()
+                                       ? tr("Updates available")
+                                       : tr("Everything is up to date"));
+    ui->updateStatusLabel->setVisible(true);
+  });
+  connect(&updater_, &update::Updater::error, this,
+          [this](const QString &err) {
+            ui->checkUpdates->setEnabled(true);
+            ui->updateStatusLabel->setStyleSheet(
+                QStringLiteral("color: #c00000;"));
+            ui->updateStatusLabel->setText(err);
+            ui->updateStatusLabel->setVisible(true);
+          });
+  connect(ui->checkUpdates, &QPushButton::clicked, this, [this] {
+    ui->checkUpdates->setEnabled(false);
+    ui->updateStatusLabel->setStyleSheet(QString());
+    ui->updateStatusLabel->setText(tr("Checking for updates..."));
+    ui->updateStatusLabel->setVisible(true);
+    updater_.checkForUpdates();
+  });
+  connect(ui->installUpdate, &QPushButton::clicked, this, [this] {
+    updater_.installSelected(ui->updatesView);
+  });
+  connect(ui->updateAll, &QPushButton::clicked,  //
+          &updater_, &update::Updater::updateAll);
 
   // about
   {

@@ -79,6 +79,14 @@ jobs:
           name: ${{ env.artifact }}
           path: ./${{ env.artifact }}
 
+      - name: Upload build metadata
+        uses: actions/upload-artifact@v6
+        if: success()
+        with:
+          name: meta-${{ matrix.config.name }}
+          path: ./${{ matrix.config.name }}-meta.json
+          if-no-files-found: ignore
+
   release:
     name: Create GitHub Release
     needs: build
@@ -94,6 +102,14 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: ./artifacts
+          pattern: ScreenTranslator-*
+          merge-multiple: true
+
+      - name: Download build metadata
+        uses: actions/download-artifact@v7
+        with:
+          path: ./meta
+          pattern: meta-*
           merge-multiple: true
 
       - name: Determine Version and Tag
@@ -126,3 +142,47 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update updates.json with release metadata
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - << 'EOF'
+          import glob, json, os
+
+          tag = os.environ['TAG']
+          repo = os.environ['REPO']
+          with open('updates.json', 'r', encoding='utf-8') as f:
+              data = json.load(f)
+
+          changed = False
+          for meta_file in sorted(glob.glob('./meta/*-meta.json')):
+              with open(meta_file, 'r', encoding='utf-8') as f:
+                  meta = json.load(f)
+              host = meta.get('host')
+              if not host or host not in data.get('app', {}):
+                  continue
+              entry = data['app'][host]
+              entry['version'] = meta['version']
+              if entry.get('files'):
+                  finfo = entry['files'][0]
+                  finfo['url'] = f"https://github.com/{repo}/releases/download/{tag}/{meta['artifact']}"
+                  if meta.get('md5'):
+                      finfo['md5'] = meta['md5']
+                  if meta.get('size'):
+                      finfo['size'] = meta['size']
+                  changed = True
+
+          if changed:
+              with open('updates.json', 'w', encoding='utf-8') as f:
+                  json.dump(data, f, indent=2, ensure_ascii=False)
+                  f.write('\n')
+          EOF
+          if ! git diff --quiet updates.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add updates.json
+            git commit -m "chore: update updates.json for ${TAG} [skip ci]"
+            git push origin HEAD:master
+          fi

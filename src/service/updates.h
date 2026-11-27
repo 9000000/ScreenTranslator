@@ -23,8 +23,10 @@ struct File {
   QString rawPath;
   QString expandedPath;
   QString md5;
+  QString version;
   QDateTime versionDate;
   int progress{0};
+  bool isAppArchive{false};
   std::optional<State> state;
 };
 
@@ -96,6 +98,7 @@ public:
   using Urls = QVector<QUrl>;
   explicit Loader(Updater& updater);
 
+  void setIgnoreSslErrors(bool ignore);
   void download(const Urls& urls);
 
 private:
@@ -105,6 +108,7 @@ private:
   Updater& updater_;
   QNetworkAccessManager* network_;
   QHash<QNetworkReply*, Urls> downloads_;
+  bool ignoreSslErrors_{false};
 };
 
 class Installer
@@ -114,6 +118,7 @@ public:
 
   void remove(const File& file);
   void install(const File& file, const QByteArray& data);
+  bool extractArchive(const QByteArray& zipData, const QString& destDir);
   void checkInstall(const File& file);
   const QString& error() const;
 
@@ -151,7 +156,11 @@ public:
 
   void initView(QTreeView* view);
   void setExpansions(const QHash<QString, QString>& expansions);
+  void setIgnoreSslErrors(bool ignore);
   void checkForUpdates();
+  void installSelected(QTreeView* view);
+  void updateAll();
+  bool hasUpdates() const;
 
   QDateTime lastUpdateCheck() const;
   void setAutoUpdate(int intervalDays, const QDateTime& lastCheck);
@@ -168,6 +177,8 @@ signals:
   void error(const QString& error);
 
 private:
+  void applyAppUpdate(const File& file, const QUrl& url,
+                      const QByteArray& data);
   void handleModelDoubleClick(const QModelIndex& index);
   void showModelContextMenu();
   int findDownload(const QUrl& url) const;

@@ -2,18 +2,28 @@
 #include "debug.h"
 
 #include <QApplication>
+#include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMenu>
+#include <QMessageBox>
+#include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QProcess>
 #include <QScopeGuard>
 #include <QSortFilterProxyModel>
+#include <QSslError>
 #include <QTemporaryFile>
 #include <QTimer>
 #include <QTreeView>
+#include <QVersionNumber>
 
+#include <algorithm>
 #include <random>
 
 #define MINIZ_NO_ZLIB_APIS
@@ -225,8 +235,18 @@ std::unique_ptr<Model::Component> Model::parse(const QJsonObject &json) const
       }
       file.rawPath = object["path"].toString();
       file.md5 = object["md5"].toString();
+      file.version = result->version;
       file.versionDate =
           QDateTime::fromString(object["date"].toString(), Qt::ISODate);
+      if (file.rawPath.startsWith(QLatin1String("$appdir$/"))) {
+        file.isAppArchive = std::any_of(
+            file.urls.cbegin(), file.urls.cend(), [](const QUrl &u) {
+              const auto p = u.path();
+              return p.endsWith(QLatin1String(".zip"), Qt::CaseInsensitive) ||
+                     p.endsWith(QLatin1String(".AppImage"),
+                                Qt::CaseInsensitive);
+            });
+      }
       const auto size = object["size"].toInt();
       result->size += size;
       result->files.push_back(file);
@@ -347,11 +367,24 @@ void Model::updateStates()
 State Model::currentState(const File &file) const
 {
   if (file.expandedPath.isEmpty() ||
-      (file.md5.isEmpty() && !file.versionDate.isValid()))
+      (file.md5.isEmpty() && !file.versionDate.isValid() &&
+       file.version.isEmpty()))
     return State::NotAvailable;
 
   if (!QFile::exists(file.expandedPath))
     return State::NotInstalled;
+
+  if (file.isAppArchive && !file.version.isEmpty()) {
+    const auto currentVer =
+        QVersionNumber::fromString(QApplication::applicationVersion());
+    const auto remoteVer = QVersionNumber::fromString(file.version);
+    if (!currentVer.isNull() && !remoteVer.isNull()) {
+      if (remoteVer > currentVer)
+        return State::UpdateAvailable;
+      if (remoteVer < currentVer)
+        return State::Actual;
+    }
+  }
 
   if (file.versionDate.isValid()) {
     QFileInfo info(file.expandedPath);
@@ -468,7 +501,7 @@ QModelIndex Model::index(int row, int column, const QModelIndex &parent) const
     return toIndex(*ptr->children[row], column);
   }
 
-  if (row < 0 && row >= int(root_->children.size()))
+  if (row < 0 || row >= int(root_->children.size()))
     return {};
 
   return toIndex(*root_->children[row], column);
@@ -476,10 +509,12 @@ QModelIndex Model::index(int row, int column, const QModelIndex &parent) const
 
 QModelIndex Model::parent(const QModelIndex &child) const
 {
+  if (!child.isValid())
+    return {};
   auto ptr = toComponent(child);
-  if (auto parent = ptr->parent)
-    return createIndex(parent->index, 0, parent);
-  return {};
+  if (!ptr || !ptr->parent || ptr->parent == root_.get())
+    return {};
+  return createIndex(ptr->parent->index, 0, ptr->parent);
 }
 
 int Model::rowCount(const QModelIndex &parent) const
@@ -557,6 +592,11 @@ Loader::Loader(Updater &updater)
           this, &Loader::handleReply);
 }
 
+void Loader::setIgnoreSslErrors(bool ignore)
+{
+  ignoreSslErrors_ = ignore;
+}
+
 void Loader::download(const Urls &urls)
 {
   start(urls, {}, {});
@@ -575,20 +615,25 @@ void Loader::start(const Urls &urls, const QUrl &previous, const QString &error)
 
   auto leftUrls = urls;
   const auto current = leftUrls.takeFirst();
-  auto reply = network_->get(QNetworkRequest(current));
+  QNetworkRequest request(current);
+  request.setAttribute(QNetworkRequest::CacheLoadControlAttribute,
+                       QNetworkRequest::AlwaysNetwork);
+  auto reply = network_->get(request);
   downloads_.insert(reply, leftUrls);
 
   connect(reply, &QNetworkReply::downloadProgress,  //
           this, [this, current](qint64 bytesSent, qint64 bytesTotal) {
             updater_.updateProgress(current, bytesSent, bytesTotal);
           });
+  connect(reply, &QNetworkReply::sslErrors, this,
+          [this, reply](const QList<QSslError> &) {
+            if (ignoreSslErrors_)
+              reply->ignoreSslErrors();
+          });
 
   if (reply->error() == QNetworkReply::NoError) {
     updater_.updateProgress(current, -1, -1);
-    return;
   }
-
-  handleReply(reply);
 }
 
 void Loader::handleReply(QNetworkReply *reply)
@@ -762,6 +807,149 @@ void Installer::install(const File &file, const QByteArray &data)
   }
 }
 
+bool Installer::extractArchive(const QByteArray &zipData,
+                               const QString &destDir)
+{
+  if (zipData.size() <= 4 || zipData.left(2) != "PK") {
+    error_ += QApplication::translate("Updates", "Invalid zip archive");
+    return false;
+  }
+
+  mz_zip_archive zip;
+  memset(&zip, 0, sizeof(zip));
+  if (!mz_zip_reader_init_mem(&zip, zipData.data(), zipData.size(), 0)) {
+    error_ +=
+        QApplication::translate("Updates", "Failed to open zip archive: %1")
+            .arg(QString::fromUtf8(mz_zip_get_error_string(zip.m_last_error)));
+    return false;
+  }
+
+  const auto guard = qScopeGuard([&zip] { mz_zip_reader_end(&zip); });
+  const auto fileCount = mz_zip_reader_get_num_files(&zip);
+  if (fileCount < 1) {
+    error_ += QApplication::translate("Updates", "Zip archive is empty");
+    return false;
+  }
+
+  // Detect whether all entries share a single top-level folder (e.g. "ScreenTranslator/")
+  QString commonPrefix;
+  bool hasCommonPrefix = true;
+  for (auto i = 0u; i < fileCount; ++i) {
+    mz_zip_archive_file_stat st;
+    if (!mz_zip_reader_file_stat(&zip, i, &st))
+      continue;
+    if (st.m_is_directory)
+      continue;
+    auto entry = QString::fromUtf8(st.m_filename).replace(QLatin1Char('\\'),
+                                                          QLatin1Char('/'));
+    const int slash = entry.indexOf(QLatin1Char('/'));
+    if (slash <= 0) {
+      hasCommonPrefix = false;
+      break;
+    }
+    const auto top = entry.left(slash + 1);
+    if (commonPrefix.isEmpty())
+      commonPrefix = top;
+    else if (commonPrefix != top) {
+      hasCommonPrefix = false;
+      break;
+    }
+  }
+  if (!hasCommonPrefix)
+    commonPrefix.clear();
+
+  QDir dest(destDir);
+  if (!dest.exists() && !dest.mkpath(".")) {
+    error_ += QApplication::translate("Updates", "Failed to create path\n%1")
+                  .arg(destDir);
+    return false;
+  }
+
+  auto cleanedDest = QDir::cleanPath(QFileInfo(destDir).absoluteFilePath());
+  if (!cleanedDest.endsWith(QLatin1Char('/')))
+    cleanedDest += QLatin1Char('/');
+
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+  const auto cs = Qt::CaseInsensitive;
+#else
+  const auto cs = Qt::CaseSensitive;
+#endif
+
+  int extractedCount = 0;
+  for (auto i = 0u; i < fileCount; ++i) {
+    mz_zip_archive_file_stat st;
+    if (!mz_zip_reader_file_stat(&zip, i, &st)) {
+      error_ += QApplication::translate("Updates", "Failed to read zip entry");
+      return false;
+    }
+    if (st.m_is_directory)
+      continue;
+
+    auto relPath = QString::fromUtf8(st.m_filename).replace(QLatin1Char('\\'),
+                                                            QLatin1Char('/'));
+    if (!commonPrefix.isEmpty() && relPath.startsWith(commonPrefix))
+      relPath = relPath.mid(commonPrefix.size());
+
+    if (relPath.isEmpty() || relPath.startsWith(QLatin1Char('/')) ||
+        relPath.contains(QLatin1Char(':'))) {
+      error_ +=
+          QApplication::translate("Updates", "Unsafe archive entry\n%1")
+              .arg(relPath);
+      return false;
+    }
+
+    const auto parts = relPath.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+    if (parts.contains(QStringLiteral(".."))) {
+      error_ +=
+          QApplication::translate("Updates", "Unsafe archive entry\n%1")
+              .arg(relPath);
+      return false;
+    }
+
+    const auto targetPath =
+        QDir::cleanPath(QFileInfo(cleanedDest + relPath).absoluteFilePath());
+    if (!targetPath.startsWith(cleanedDest, cs)) {
+      error_ +=
+          QApplication::translate("Updates", "Unsafe archive entry\n%1")
+              .arg(relPath);
+      return false;
+    }
+
+    auto parentDir = QFileInfo(targetPath).absoluteDir();
+    if (!parentDir.exists() && !parentDir.mkpath(".")) {
+      error_ += QApplication::translate("Updates", "Failed to create path\n%1")
+                    .arg(parentDir.absolutePath());
+      return false;
+    }
+
+    QByteArray extracted(int(st.m_uncomp_size), Qt::Uninitialized);
+    if (st.m_uncomp_size > 0 &&
+        !mz_zip_reader_extract_to_mem(&zip, i, extracted.data(),
+                                      size_t(extracted.size()), 0)) {
+      error_ +=
+          QApplication::translate("Updates", "Failed to extract file\n%1")
+              .arg(relPath);
+      return false;
+    }
+
+    QFile outFile(targetPath);
+    if (!outFile.open(QFile::WriteOnly | QFile::Truncate) ||
+        outFile.write(extracted) != extracted.size()) {
+      error_ += QApplication::translate("Updates",
+                                        "Failed to write file\n%1\nError %2")
+                    .arg(targetPath, outFile.errorString());
+      return false;
+    }
+    ++extractedCount;
+  }
+
+  if (extractedCount == 0) {
+    error_ += QApplication::translate("Updates", "Zip archive is empty");
+    return false;
+  }
+  return true;
+}
+
 const QString &Installer::error() const
 {
   return error_;
@@ -853,9 +1041,35 @@ void Updater::setExpansions(const QHash<QString, QString> &expansions)
   model_->setExpansions(expansions);
 }
 
+void Updater::setIgnoreSslErrors(bool ignore)
+{
+  loader_->setIgnoreSslErrors(ignore);
+}
+
 void Updater::checkForUpdates()
 {
   loader_->download(updateUrls_);
+}
+
+void Updater::installSelected(QTreeView *view)
+{
+  if (!view || !view->selectionModel())
+    return;
+
+  const auto indexes =
+      view->selectionModel()->selectedRows(int(Model::Column::Name));
+  for (const auto &index : indexes)
+    model_->tryAction(Action::Install, fromProxy(index));
+}
+
+void Updater::updateAll()
+{
+  model_->selectAllUpdates();
+}
+
+bool Updater::hasUpdates() const
+{
+  return model_->hasUpdates();
 }
 
 void Updater::applyAction(Action action, const QVector<File> &files)
@@ -864,6 +1078,8 @@ void Updater::applyAction(Action action, const QVector<File> &files)
     LTRACE() << "applyAction" << int(action) << file.rawPath;
 
     if (action == Action::Remove) {
+      if (file.isAppArchive)
+        continue;
       Installer installer(expansions_.values());
       installer.remove(file);
       if (!installer.error().isEmpty()) {
@@ -920,6 +1136,11 @@ void Updater::downloaded(const QUrl &url, const QByteArray &data)
   const auto file = downloading_.takeAt(index);
   LTRACE() << "downloaded file" << url << file.expandedPath;
 
+  if (file.isAppArchive) {
+    applyAppUpdate(file, url, data);
+    return;
+  }
+
   const auto mustUnpack =
       url.toString().endsWith(".zip") && !file.expandedPath.endsWith(".zip");
   const auto unpacked = mustUnpack ? unpack(data) : data;
@@ -938,6 +1159,149 @@ void Updater::downloaded(const QUrl &url, const QByteArray &data)
   model_->invalidate(file);
   model_->updateStates();
   emit updated();
+}
+
+void Updater::applyAppUpdate(const File &file, const QUrl &url,
+                             const QByteArray &data)
+{
+  Q_UNUSED(url);
+#if defined(Q_OS_WIN)
+  const auto appDir =
+      QDir::cleanPath(QFileInfo(file.expandedPath).absolutePath());
+  const auto pid = QCoreApplication::applicationPid();
+  const auto stagingDir = QDir::cleanPath(
+      QDir::tempPath() + QStringLiteral("/ScreenTranslator-update-%1").arg(pid));
+
+  QDir(stagingDir).removeRecursively();
+
+  Installer installer(expansions_.values());
+  if (!installer.extractArchive(data, stagingDir)) {
+    QDir(stagingDir).removeRecursively();
+    emit error(installer.error());
+    return;
+  }
+
+  const auto exeName = QFileInfo(file.expandedPath).fileName();
+  if (!QFile::exists(stagingDir + QLatin1Char('/') + exeName)) {
+    QDir(stagingDir).removeRecursively();
+    emit error(tr("Downloaded archive does not contain %1").arg(exeName));
+    return;
+  }
+
+  const auto versionLabel =
+      file.version.isEmpty() ? tr("new") : file.version;
+  const auto answer = QMessageBox::question(
+      nullptr, tr("Update ready"),
+      tr("Version %1 has been downloaded and is ready to install.\n"
+         "ScreenTranslator will restart now to apply the update "
+         "(your settings and assets will be preserved).\n\n"
+         "Restart now?")
+          .arg(versionLabel));
+  if (answer != QMessageBox::Yes) {
+    QDir(stagingDir).removeRecursively();
+    return;
+  }
+
+  auto stripTrailingSep = [](QString p) {
+    while (p.size() > 3 &&
+           (p.endsWith(QLatin1Char('\\')) || p.endsWith(QLatin1Char('/'))))
+      p.chop(1);
+    return p;
+  };
+  const auto srcNative = stripTrailingSep(QDir::toNativeSeparators(stagingDir));
+  const auto dstNative = stripTrailingSep(QDir::toNativeSeparators(appDir));
+  const auto batPath = QDir::toNativeSeparators(
+      QDir::tempPath() +
+      QStringLiteral("/ScreenTranslator-apply-%1.bat").arg(pid));
+
+  const QString batScript =
+      QStringLiteral(
+          "@echo off\r\n"
+          "setlocal\r\n"
+          "set \"PID=%1\"\r\n"
+          "set \"SRC=%2\"\r\n"
+          "set \"DST=%3\"\r\n"
+          "set /a TRIES=0\r\n"
+          ":waitloop\r\n"
+          "tasklist /FI \"PID eq %PID%\" 2>NUL | find /I \"%PID%\" >NUL\r\n"
+          "if not errorlevel 1 (\r\n"
+          "  set /a TRIES+=1\r\n"
+          "  if %TRIES% GEQ 30 goto copyfiles\r\n"
+          "  timeout /t 1 /nobreak >NUL\r\n"
+          "  goto waitloop\r\n"
+          ")\r\n"
+          ":copyfiles\r\n"
+          "robocopy \"%SRC%\" \"%DST%\" /E /R:5 /W:1 /NFL /NDL /NJH /NJS "
+          "/XD \"assets\" /XF \"settings.ini\" >NUL\r\n"
+          "start \"\" \"%DST%\\%4\"\r\n"
+          "rmdir /S /Q \"%SRC%\" >NUL 2>&1\r\n"
+          "del \"%~f0\" >NUL 2>&1\r\n")
+          .arg(QString::number(pid), srcNative, dstNative, exeName);
+
+  QFile batFile(batPath);
+  if (!batFile.open(QFile::WriteOnly | QFile::Truncate)) {
+    QDir(stagingDir).removeRecursively();
+    emit error(tr("Failed to create update script\n%1").arg(batPath));
+    return;
+  }
+  batFile.write(batScript.toUtf8());
+  batFile.close();
+
+  if (!QProcess::startDetached(QStringLiteral("cmd.exe"),
+                               {QStringLiteral("/C"), batPath})) {
+    QDir(stagingDir).removeRecursively();
+    QFile::remove(batPath);
+    emit error(tr("Failed to launch update script"));
+    return;
+  }
+
+  QApplication::quit();
+#elif defined(Q_OS_LINUX)
+  const auto appImagePath = qEnvironmentVariable("APPIMAGE");
+  if (appImagePath.isEmpty()) {
+    emit error(tr("Self-update on Linux is only supported when running from an "
+                  "AppImage"));
+    return;
+  }
+
+  const auto newPath = appImagePath + QStringLiteral(".new");
+  QFile out(newPath);
+  if (!out.open(QFile::WriteOnly | QFile::Truncate) ||
+      out.write(data) != data.size()) {
+    emit error(tr("Failed to write AppImage\n%1\nError %2")
+                   .arg(newPath, out.errorString()));
+    return;
+  }
+  out.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+                     QFileDevice::ExeOwner | QFileDevice::ReadGroup |
+                     QFileDevice::ExeGroup | QFileDevice::ReadOther |
+                     QFileDevice::ExeOther);
+  out.close();
+
+  const auto versionLabel =
+      file.version.isEmpty() ? tr("new") : file.version;
+  const auto answer = QMessageBox::question(
+      nullptr, tr("Update ready"),
+      tr("Version %1 has been downloaded and is ready to install.\n"
+         "ScreenTranslator will restart now to apply the update.\n\n"
+         "Restart now?")
+          .arg(versionLabel));
+  if (answer != QMessageBox::Yes) {
+    QFile::remove(newPath);
+    return;
+  }
+
+  QFile::remove(appImagePath);
+  if (!QFile::rename(newPath, appImagePath)) {
+    emit error(tr("Failed to replace AppImage\n%1").arg(appImagePath));
+    return;
+  }
+
+  QProcess::startDetached(appImagePath, QCoreApplication::arguments().mid(1));
+  QApplication::quit();
+#else
+  emit error(tr("Automatic app update is not supported on this platform"));
+#endif
 }
 
 void Updater::updateProgress(const QUrl &url, qint64 bytesSent,
