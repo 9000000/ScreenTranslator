@@ -310,7 +310,7 @@ TEST(UpdateInstaller, ExtractArchiveRejectsZipSlip)
 TEST(UpdateModel, AppZipVersionComparison)
 {
   const auto prevVer = QCoreApplication::applicationVersion();
-  QCoreApplication::setApplicationVersion("4.2.0");
+  QCoreApplication::setApplicationVersion("4.3.2");
 
   const QString fakeDir = QDir::currentPath() + "/test_appdir";
   QDir(fakeDir).mkpath(".");
