@@ -282,7 +282,8 @@ struct TextStats {
   int hebrew{0};
   int devanagari{0};
   int otherScript{0};
-  bool vietnamese{false};
+  int vietnamese{0};
+  int vietnameseUnique{0};
 };
 
 TextStats analyzeText(const QString &text)
@@ -290,6 +291,11 @@ TextStats analyzeText(const QString &text)
   static const QString vietnameseChars = QString::fromUtf8(
       "àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵ"
       "ÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ"
+      "đĐ");
+  // Characters unique to Vietnamese (not shared with French/Spanish/Portuguese/Italian)
+  static const QString vietnameseUniqueChars = QString::fromUtf8(
+      "ảạăắằẳẵặấầẩẫậẻẽẹếềểễệỉĩịỏọốồổỗộơớờởỡợủũụưứừửữựỳỷỹỵ"
+      "ẢẠĂẮẰẲẴẶẤẦẨẪẬẺẼẸẾỀỂỄỆỈĨỊỎỌỐỒỔỖỘƠỚỜỞỠỢỦŨỤƯỨỪỬỮỰỲỶỸỴ"
       "đĐ");
 
   TextStats s;
@@ -305,8 +311,11 @@ TextStats analyzeText(const QString &text)
     ++s.letters;
     if (ch.unicode() > 127) {
       ++s.nonAsciiLetters;
-      if (!s.vietnamese && vietnameseChars.contains(ch))
-        s.vietnamese = true;
+      if (vietnameseChars.contains(ch)) {
+        ++s.vietnamese;
+        if (vietnameseUniqueChars.contains(ch))
+          ++s.vietnameseUnique;
+      }
     }
 
     switch (ch.script()) {
@@ -373,8 +382,13 @@ bool LanguageCodes::isSameLanguage(const QString &text,
   const bool sameOrAutoSource =
       (sourceIso == targetIso || sourceIso == QLatin1String("auto"));
 
-  if (targetIso == QLatin1String("vi"))
-    return s.vietnamese;
+  if (targetIso == QLatin1String("vi")) {
+    if (s.latin <= (s.letters * 2) / 3)
+      return false;
+    if (s.vietnameseUnique > 0 && sameOrAutoSource)
+      return true;
+    return sourceIso == QLatin1String("vi") && s.vietnamese > 0;
+  }
 
   if (targetIso == QLatin1String("ja")) {
     if (s.kana > 0)
@@ -419,7 +433,7 @@ bool LanguageCodes::isSameLanguage(const QString &text,
 
   // ponytail: heuristic Latin match using OCR winning language; full NLP langid unnecessary here
   return sourceIso == targetIso && s.latin > (s.letters * 2) / 3 &&
-         !s.vietnamese;
+         s.vietnameseUnique == 0;
 }
 
 double LanguageCodes::scoreRecognizedText(const QString &text,
@@ -439,9 +453,9 @@ double LanguageCodes::scoreRecognizedText(const QString &text,
 
   const auto iso = iso639_1(langId);
   if (iso == QLatin1String("vi")) {
-    if (s.vietnamese && confidence >= 70)
+    if (s.vietnameseUnique > 0 && confidence >= 70)
       score += 5.0;
-    else if (!s.vietnamese)
+    else if (s.vietnamese == 0)
       score -= 1.5;
   } else if (iso == QLatin1String("ja")) {
     if (s.kana > 0 && confidence >= 65)

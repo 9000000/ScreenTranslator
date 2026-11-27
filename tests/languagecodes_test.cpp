@@ -28,6 +28,19 @@ TEST(LanguageCodes, IsSameLanguageSkipCheck)
 
   const auto accentedFr = QString::fromUtf8("Café déjà");
   EXPECT_FALSE(LanguageCodes::isSameLanguage(accentedFr, "eng", "eng"));
+  EXPECT_FALSE(LanguageCodes::isSameLanguage(accentedFr, "fra", "vie"));
+  EXPECT_FALSE(LanguageCodes::isSameLanguage(accentedFr, "auto", "vie"));
+  EXPECT_TRUE(LanguageCodes::isSameLanguage(accentedFr, "fra", "fra"));
+
+  const auto enLoanword = QString::fromUtf8("Update your résumé");
+  EXPECT_FALSE(LanguageCodes::isSameLanguage(enLoanword, "eng", "vie"));
+  EXPECT_FALSE(LanguageCodes::isSameLanguage(enLoanword, "auto", "vie"));
+
+  const auto jaWithNoise = QString::fromUtf8("設定を開く é");
+  EXPECT_FALSE(LanguageCodes::isSameLanguage(jaWithNoise, "auto", "vie"));
+
+  const auto viSharedAccent = QString::fromUtf8("Xin chào");
+  EXPECT_TRUE(LanguageCodes::isSameLanguage(viSharedAccent, "vie", "vie"));
 
   const auto jaKana = QString::fromUtf8("設定を開く");
   EXPECT_TRUE(LanguageCodes::isSameLanguage(jaKana, "jpn", "jpn"));
