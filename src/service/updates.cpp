@@ -657,8 +657,13 @@ void Loader::handleReply(QNetworkReply *reply)
   const auto url = reply->request().url();
 
   if (reply->error() != QNetworkReply::NoError) {
-    const auto error = tr("Failed to download file\n%1. Error %2")
-                           .arg(reply->url().toString(), reply->errorString());
+    const auto status =
+        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const auto statusStr =
+        status > 0 ? QStringLiteral(" (HTTP %1)").arg(status) : QString();
+    const auto error = tr("Failed to download file\n%1. Error %2%3")
+                           .arg(reply->url().toString(), reply->errorString(),
+                                statusStr);
     start(leftUrls, url, error);
     return;
   }

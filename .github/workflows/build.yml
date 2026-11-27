@@ -122,7 +122,7 @@ jobs:
           else
             PRO_VER=$(grep -E 'VER\s*=' screen-translator.pro | sed -E 's/.*VER\s*=\s*//' | tr -d ' \r\n')
             [ -z "$PRO_VER" ] && PRO_VER="4.3.2"
-            TAG="v${PRO_VER}"
+            TAG="${PRO_VER}"
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "release_name=ScreenTranslator ${TAG}" >> $GITHUB_OUTPUT
