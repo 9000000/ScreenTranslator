@@ -8,7 +8,8 @@
         {
           "url": "https://github.com/9000000/ScreenTranslator/releases/download/v4.2.0/ScreenTranslator-4.2.0-win64.zip",
           "path": "$appdir$/screen-translator.exe",
-          "md5": "3f2c3c27364f25c239ea63243a8910a3"
+          "md5": "752149dd2ebdc154917b14da261be233",
+          "size": 147241322
         }
       ]
     },
@@ -19,7 +20,8 @@
         {
           "url": "https://github.com/9000000/ScreenTranslator/releases/download/v4.2.0/ScreenTranslator-4.2.0.AppImage",
           "path": "$appdir$/screen-translator",
-          "md5": "a091be0443fd128a02b01b313e0270bc"
+          "md5": "4f313a1824834eba351e41f9b62f88b7",
+          "size": 130300408
         }
       ]
     }
