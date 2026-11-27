@@ -2,25 +2,25 @@
   "version": 1,
   "app": {
     "win64": {
-      "version": "4.2.0",
+      "version": "4.3.2",
       "host": "win64",
       "files": [
         {
-          "url": "https://github.com/9000000/ScreenTranslator/releases/download/v4.2.0/ScreenTranslator-4.2.0-win64.zip",
+          "url": "https://github.com/9000000/ScreenTranslator/releases/download/4.3.2/ScreenTranslator-4.3.2-win64.zip",
           "path": "$appdir$/screen-translator.exe",
-          "md5": "752149dd2ebdc154917b14da261be233",
-          "size": 147241322
+          "md5": "61fd36e6214f35621019396090dd8cb9",
+          "size": 147241359
         }
       ]
     },
     "linux": {
-      "version": "4.2.0",
+      "version": "4.3.2",
       "host": "linux",
       "files": [
         {
-          "url": "https://github.com/9000000/ScreenTranslator/releases/download/v4.2.0/ScreenTranslator-4.2.0.AppImage",
+          "url": "https://github.com/9000000/ScreenTranslator/releases/download/4.3.2/ScreenTranslator-4.3.2.AppImage",
           "path": "$appdir$/screen-translator",
-          "md5": "4f313a1824834eba351e41f9b62f88b7",
+          "md5": "1409bdc816c9870a3091185aa1fafab0",
           "size": 130300408
         }
       ]
