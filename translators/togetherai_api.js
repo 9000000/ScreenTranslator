@@ -1,13 +1,17 @@
-const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Together AI API key https://api.together.ai/
-const MODEL = 'meta-llama/Llama-3.3-70B-Instruct-Turbo'; // Models: meta-llama/Llama-3.3-70B-Instruct-Turbo, Qwen/Qwen2.5-72B-Instruct-Turbo, meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo (https://api.together.ai/models)
+const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Together AI API key https://api.together.ai/settings/api-keys
+const MODEL = 'deepseek-ai/DeepSeek-V4.1-Flash'; // Models: deepseek-ai/DeepSeek-V4.1-Flash, meta-llama/Llama-3.3-70B-Instruct, meta-llama/Llama-4-Scout-17B-16E-Instruct, Qwen/Qwen3.6-Plus, Qwen/Qwen4-Max (https://api.together.ai/models)
 const API_URL = 'https://api.together.xyz/v1/chat/completions';
 const MAX_TOKENS = 2000;
 const TEMPERATURE = 0.3;
 
+function stripThinking(text) {
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 function translate(text, from, to) {
     console.log('Start translate (Together AI):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -63,13 +67,16 @@ function translate(text, from, to) {
         if (!data) return;
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (Together AI):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from Together AI API:', data);
-            proxy.setFailed('Unexpected response from Together AI API');
+            const translatedText = stripThinking(data.choices[0].message.content);
+            if (translatedText) {
+                console.log('Translated text (Together AI):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from Together AI API:', data);
+        proxy.setFailed('Unexpected response from Together AI API');
     })
     .catch(error => {
         console.error('Error fetching from Together AI API:', error);

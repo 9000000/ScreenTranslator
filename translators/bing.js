@@ -34,12 +34,11 @@ function mapBingLang(lang) {
 function translate(text, from, to) {
     console.log('Start translate (Bing Web):', text, 'from:', from, 'to:', to);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
 
-    active = true;
     let targetLang = mapBingLang(to);
     let srcLang = (from && from !== 'auto') ? mapBingLang(from) : 'auto-detect';
 
@@ -48,6 +47,7 @@ function translate(text, from, to) {
         && window.location.href.indexOf('to=' + targetLang) !== -1) {
         var input = document.querySelector('textarea#tta_input_ta') || document.querySelector('.tta_input_ta');
         if (input) {
+            active = true;
             if (input.value === text) {
                 console.log('using cached result');
                 lastText = '';
@@ -59,6 +59,8 @@ function translate(text, from, to) {
         }
     }
 
+    active = false;
+    lastText = '';
     let url = 'https://www.bing.com/translator/?from=' + srcLang + '&to=' + targetLang + '&text=' + encodeURIComponent(text);
     console.log("setting url", url);
     window.location = url;

@@ -1,13 +1,17 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Groq API key https://console.groq.com/keys
-const MODEL = 'llama-3.3-70b-versatile'; // Models: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768 (https://console.groq.com/docs/models)
+const MODEL = 'llama-3.3-70b-versatile'; // Models: llama-3.3-70b-versatile, llama-3.1-8b-instant, openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.8-27b (https://console.groq.com/docs/models)
 const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MAX_TOKENS = 2000;
 const TEMPERATURE = 0.3;
 
+function stripThinking(text) {
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 function translate(text, from, to) {
     console.log('Start translate (Groq):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -63,13 +67,16 @@ function translate(text, from, to) {
         if (!data) return;
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (Groq):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from Groq API:', data);
-            proxy.setFailed('Unexpected response from Groq API');
+            const translatedText = stripThinking(data.choices[0].message.content);
+            if (translatedText) {
+                console.log('Translated text (Groq):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from Groq API:', data);
+        proxy.setFailed('Unexpected response from Groq API');
     })
     .catch(error => {
         console.error('Error fetching from Groq API:', error);

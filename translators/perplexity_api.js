@@ -1,13 +1,17 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Perplexity API key https://www.perplexity.ai/account/api/keys
-const MODEL = 'sonar'; // Models: sonar, sonar-pro, sonar-reasoning (https://docs.perplexity.ai/models/model-cards)
-const API_URL = 'https://api.perplexity.ai/chat/completions';
+const MODEL = 'perplexity/glm-5.3'; // Perplexity Orchestrator models: perplexity/glm-5.3, openai/gpt-6-luna, anthropic/claude-haiku-5-5 (https://docs.perplexity.ai/)
+const API_URL = 'https://api.perplexity.ai/orchestrator/v1/chat/completions';
 const MAX_TOKENS = 2000;
 const TEMPERATURE = 0.3;
+
+function stripThinking(text) {
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
 
 function translate(text, from, to) {
     console.log('Start translate (Perplexity):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -63,13 +67,16 @@ function translate(text, from, to) {
         if (!data) return;
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (Perplexity):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from Perplexity API:', data);
-            proxy.setFailed('Unexpected response from Perplexity API');
+            const translatedText = stripThinking(data.choices[0].message.content);
+            if (translatedText) {
+                console.log('Translated text (Perplexity):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from Perplexity API:', data);
+        proxy.setFailed('Unexpected response from Perplexity API');
     })
     .catch(error => {
         console.error('Error fetching from Perplexity API:', error);

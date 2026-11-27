@@ -1,12 +1,48 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Gemini API key https://aistudio.google.com/app/apikey
-const MODEL = 'gemini-2.0-flash'; // Models: gemini-2.0-flash, gemini-2.5-flash, gemini-1.5-flash (https://ai.google.dev/gemini-api/docs/models)
-const MAX_TOKENS = 2000;
-const TEMPERATURE = 0.3;
+const MODEL = 'gemini-3.5-flash-lite'; // Models: gemini-3.5-flash-lite, gemini-4-hydrogen, gemini-4-argon, gemini-4-neon, gemini-4-carbon (https://ai.google.dev/gemini-api/docs/models)
+const API_URL = 'https://generativelanguage.googleapis.com/v1/interactions';
+const MAX_OUTPUT_TOKENS = 4096;
+
+function extractInteractionText(data) {
+    if (!data) return '';
+
+    // Interactions API v1 (steps schema)
+    if (Array.isArray(data.steps)) {
+        const parts = [];
+        for (const step of data.steps) {
+            if (step && step.type === 'model_output' && Array.isArray(step.content)) {
+                for (const item of step.content) {
+                    if (item && item.type === 'text' && typeof item.text === 'string') {
+                        parts.push(item.text);
+                    }
+                }
+            }
+        }
+        if (parts.length > 0) {
+            return parts.join('').trim();
+        }
+    }
+
+    // Fallback for outputs schema
+    if (Array.isArray(data.outputs)) {
+        const parts = [];
+        for (const out of data.outputs) {
+            if (out && out.type === 'text' && typeof out.text === 'string') {
+                parts.push(out.text);
+            }
+        }
+        if (parts.length > 0) {
+            return parts.join('').trim();
+        }
+    }
+
+    return '';
+}
 
 function translate(text, from, to) {
     console.log('Start translate (Gemini):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -16,53 +52,25 @@ function translate(text, from, to) {
         return;
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
     const sourceClause = (!from || from === 'auto') ? 'automatically detecting the source language' : `from ${from}`;
     const systemPrompt = `You are a professional translator. Translate the provided text ${sourceClause} into ${to}. Preserve original formatting, line breaks, and punctuation. Output ONLY the translated text without explanations, greetings, quotes, or markdown code blocks.`;
 
     const requestBody = {
-        system_instruction: {
-            parts: [{
-                text: systemPrompt
-            }]
-        },
-        contents: [{
-            parts: [{
-                text: text
-            }]
-        }],
-        generationConfig: {
-            temperature: TEMPERATURE,
-            maxOutputTokens: MAX_TOKENS
-        },
-        safetySettings: [
-            {
-                category: "HARM_CATEGORY_HARASSMENT",
-                threshold: "BLOCK_NONE"
-            },
-            {
-                category: "HARM_CATEGORY_HATE_SPEECH",
-                threshold: "BLOCK_NONE"
-            },
-            {
-                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                threshold: "BLOCK_NONE"
-            },
-            {
-                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                threshold: "BLOCK_NONE"
-            },
-            {
-                category: "HARM_CATEGORY_CIVIC_INTEGRITY",
-                threshold: "BLOCK_NONE"
-            }
-        ]
+        model: MODEL,
+        system_instruction: systemPrompt,
+        input: text,
+        store: false,
+        generation_config: {
+            max_output_tokens: MAX_OUTPUT_TOKENS
+        }
     };
 
-    fetch(apiUrl, {
+    fetch(API_URL, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-goog-api-key': API_KEY,
+            'Api-Revision': '2026-05-20'
         },
         body: JSON.stringify(requestBody)
     })
@@ -84,25 +92,18 @@ function translate(text, from, to) {
     .then(data => {
         if (!data) return;
 
-        if (data.promptFeedback && data.promptFeedback.blockReason) {
-            console.error('Gemini API blocked prompt:', data.promptFeedback.blockReason);
-            proxy.setFailed(`Gemini API Blocked: ${data.promptFeedback.blockReason}`);
+        if (Array.isArray(data.errors) && data.errors.length > 0) {
+            const msg = data.errors.map(e => e.message || JSON.stringify(e)).join('; ');
+            console.error('Gemini API interaction errors:', msg);
+            proxy.setFailed(`Gemini API Error: ${msg}`);
             return;
         }
 
-        if (data.candidates && data.candidates.length > 0) {
-            const candidate = data.candidates[0];
-            if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0 && candidate.content.parts[0].text) {
-                const translatedText = candidate.content.parts[0].text.trim();
-                console.log('Translated text (Gemini):', translatedText);
-                proxy.setTranslated(translatedText);
-                return;
-            }
-            if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-                console.error('Gemini finished with reason:', candidate.finishReason);
-                proxy.setFailed(`Gemini API finish reason: ${candidate.finishReason}`);
-                return;
-            }
+        const translatedText = extractInteractionText(data);
+        if (translatedText) {
+            console.log('Translated text (Gemini):', translatedText);
+            proxy.setTranslated(translatedText);
+            return;
         }
 
         console.error('Unexpected response from Gemini API:', data);

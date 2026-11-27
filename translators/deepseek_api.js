@@ -1,13 +1,17 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your DeepSeek API key https://platform.deepseek.com/api_keys
-const MODEL = 'deepseek-chat'; // Models: deepseek-chat (DeepSeek-V3), deepseek-reasoner (DeepSeek-R1) (https://api-docs.deepseek.com/quick_start/pricing)
-const API_URL = 'https://api.deepseek.com/chat/completions';
+const MODEL = 'deepseek-flash'; // Models: deepseek-flash (DeepSeek-V4.1-Flash), deepseek-v4-pro (https://api-docs.deepseek.com/)
+const API_URL = 'https://api.deepseek.com/v1/chat/completions';
 const MAX_TOKENS = 2000;
 const TEMPERATURE = 0.3;
+
+function stripThinking(text) {
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
 
 function translate(text, from, to) {
     console.log('Start translate (DeepSeek API):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -63,13 +67,16 @@ function translate(text, from, to) {
         if (!data) return;
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (DeepSeek API):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from DeepSeek API:', data);
-            proxy.setFailed('Unexpected response from DeepSeek API');
+            const translatedText = stripThinking(data.choices[0].message.content);
+            if (translatedText) {
+                console.log('Translated text (DeepSeek API):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from DeepSeek API:', data);
+        proxy.setFailed('Unexpected response from DeepSeek API');
     })
     .catch(error => {
         console.error('Error fetching from DeepSeek API:', error);

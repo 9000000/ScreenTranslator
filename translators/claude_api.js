@@ -1,13 +1,13 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Anthropic API key https://console.anthropic.com/settings/keys
-const MODEL = 'claude-3-5-haiku-20241022'; // Models: claude-3-5-haiku-20241022, claude-3-7-sonnet-20250219 (https://docs.anthropic.com/en/docs/about-claude/models)
+const MODEL = 'claude-haiku-5-5'; // Models: claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5, claude-fable-5-2 (https://docs.anthropic.com/en/docs/about-claude/models)
 const API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_VERSION = '2026-10-21';
 const MAX_TOKENS = 2000;
-const TEMPERATURE = 0.3;
 
 function translate(text, from, to) {
     console.log('Start translate (Claude):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -23,7 +23,6 @@ function translate(text, from, to) {
     const requestBody = {
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE,
         system: systemPrompt,
         messages: [
             {
@@ -38,7 +37,7 @@ function translate(text, from, to) {
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': API_KEY,
-            'anthropic-version': '2023-06-01',
+            'anthropic-version': ANTHROPIC_VERSION,
             'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify(requestBody)
@@ -61,14 +60,21 @@ function translate(text, from, to) {
     .then(data => {
         if (!data) return;
 
-        if (data.content && data.content.length > 0 && data.content[0].type === 'text') {
-            const translatedText = data.content[0].text.trim();
-            console.log('Translated text (Claude):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from Claude API:', data);
-            proxy.setFailed('Unexpected response from Claude API');
+        if (Array.isArray(data.content) && data.content.length > 0) {
+            const translatedText = data.content
+                .filter(block => block && block.type === 'text' && typeof block.text === 'string')
+                .map(block => block.text)
+                .join('')
+                .trim();
+            if (translatedText) {
+                console.log('Translated text (Claude):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from Claude API:', data);
+        proxy.setFailed('Unexpected response from Claude API');
     })
     .catch(error => {
         console.error('Error fetching from Claude API:', error);

@@ -1,13 +1,17 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your OpenRouter API key https://openrouter.ai/settings/keys
-const MODEL = 'google/gemini-2.0-flash-001'; // Models: google/gemini-2.0-flash-001, meta-llama/llama-3.3-70b-instruct:free, deepseek/deepseek-chat (https://openrouter.ai/models)
+const MODEL = 'google/gemini-3.5-flash-lite'; // Models: google/gemini-3.5-flash-lite, google/gemini-4-hydrogen, deepseek/deepseek-v4.1-flash, google/gemma-4-26b-a4b-it:free (https://openrouter.ai/models)
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MAX_TOKENS = 2000;
 const TEMPERATURE = 0.3;
 
+function stripThinking(text) {
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 function translate(text, from, to) {
     console.log('Start translate (OpenRouter):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -65,13 +69,16 @@ function translate(text, from, to) {
         if (!data) return;
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (OpenRouter):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from OpenRouter API:', data);
-            proxy.setFailed('Unexpected response from OpenRouter API');
+            const translatedText = stripThinking(data.choices[0].message.content);
+            if (translatedText) {
+                console.log('Translated text (OpenRouter):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from OpenRouter API:', data);
+        proxy.setFailed('Unexpected response from OpenRouter API');
     })
     .catch(error => {
         console.error('Error fetching from OpenRouter API:', error);

@@ -34,21 +34,23 @@ function checkFinished() {
 function translate(text, from, to) {
     console.log('Start translate (Yandex Web):', text, 'from:', from, 'to:', to);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
 
-    active = true;
     let langs = (from && from !== 'auto') ? ('lang=' + from + '-' + to) : ('lang=' + to);
     let url = 'https://translate.yandex.ru/?' + langs + '&text=' + encodeURIComponent(text);
 
     if (window.location.href === url) {
         console.log('using cached result');
+        active = true;
         lastText = '';
         return;
     }
 
+    active = false;
+    lastText = '';
     console.log("setting url", url);
     window.location = url;
 }

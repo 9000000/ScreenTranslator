@@ -3,7 +3,10 @@ var active = window.location.href !== "about:blank";
 
 function extractDeepLText() {
     let area = document.querySelector('div#target-dummydiv');
-    if (area && area.innerHTML.trim()) return area.innerHTML.trim();
+    if (area) {
+        let dummyText = (area.innerText || area.textContent || '').trim();
+        if (dummyText) return dummyText;
+    }
 
     let selectors = [
         'd-textarea.lmt__target_textarea p',
@@ -15,9 +18,12 @@ function extractDeepLText() {
     ];
 
     for (let i = 0; i < selectors.length; i++) {
-        let el = document.querySelector(selectors[i]);
-        if (el && el.innerText && el.innerText.trim()) {
-            return el.innerText.trim();
+        let els = document.querySelectorAll(selectors[i]);
+        if (els.length > 0) {
+            let text = [].slice.call(els).map(function (el) {
+                return (el.innerText || el.textContent || '').trim();
+            }).filter(Boolean).join('\n').trim();
+            if (text) return text;
         }
     }
     return '';
@@ -39,7 +45,7 @@ function checkFinished() {
 function translate(text, from, to) {
     console.log('Start translate (DeepL Web):', text, 'from:', from, 'to:', to);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -49,8 +55,8 @@ function translate(text, from, to) {
 
     let supported = [
         'ar', 'bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr',
-        'hu', 'id', 'it', 'ja', 'ko', 'lt', 'lv', 'nb', 'no', 'nl', 'pl',
-        'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'tr', 'uk', 'zh'
+        'he', 'hu', 'id', 'it', 'ja', 'ko', 'lt', 'lv', 'nb', 'no', 'nl',
+        'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sv', 'th', 'tr', 'uk', 'vi', 'zh'
     ];
 
     if (from && from !== 'auto' && supported.indexOf(from) === -1) {
@@ -62,7 +68,6 @@ function translate(text, from, to) {
         return;
     }
 
-    active = true;
     var singleLineText = text.replace(/(?:\r\n|\r|\n)/g, ' ');
     let srcLang = (from && from !== 'auto') ? from : 'auto';
     let langs = srcLang + '/' + to + '/';
@@ -76,6 +81,7 @@ function translate(text, from, to) {
             || document.querySelector('div[data-testid="translator-source-input"] p');
 
         if (input) {
+            active = true;
             if (input.innerText === singleLineText) {
                 console.log('using cached result');
                 lastText = '';
@@ -84,7 +90,7 @@ function translate(text, from, to) {
             input.innerText = singleLineText;
             var areaCopy = document.querySelector('div#source-dummydiv');
             if (areaCopy)
-                areaCopy.innerHTML = singleLineText;
+                areaCopy.textContent = singleLineText;
             setTimeout(function () {
                 input.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
             }, 300);
@@ -92,6 +98,8 @@ function translate(text, from, to) {
         }
     }
 
+    active = false;
+    lastText = '';
     let url = 'https://www.deepl.com/translator#' + langs + encodeURIComponent(singleLineText);
     console.log("setting url", url);
     window.location = url;

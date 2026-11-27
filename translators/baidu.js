@@ -50,12 +50,11 @@ function checkFinished() {
 function translate(text, from, to) {
     console.log('Start translate (Baidu Web):', text, 'from:', from, 'to:', to);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
 
-    active = true;
     let srcLang = mapBaiduLang(from);
     let targetLang = mapBaiduLang(to);
     let langs = srcLang + '/' + targetLang;
@@ -64,6 +63,7 @@ function translate(text, from, to) {
         && window.location.href.indexOf(langs) !== -1) {
         var input = document.querySelector('textarea#baidu_translate_input') || document.querySelector('textarea.textarea');
         if (input) {
+            active = true;
             if (input.value === text) {
                 console.log('using cached result');
                 lastText = '';
@@ -75,6 +75,8 @@ function translate(text, from, to) {
         }
     }
 
+    active = false;
+    lastText = '';
     let url = 'https://fanyi.baidu.com/#' + langs + '/' + encodeURIComponent(text);
     console.log("setting url", url);
     window.location = url;

@@ -1,13 +1,12 @@
 const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your OpenAI API key https://platform.openai.com/settings/organization/api-keys
-const MODEL = 'gpt-4o-mini'; // Models: gpt-4o-mini, gpt-4o, o3-mini (https://platform.openai.com/docs/models)
+const MODEL = 'gpt-6-luna'; // Models: gpt-6-luna, gpt-6.2-sol, gpt-6.2-astra (https://platform.openai.com/docs/models)
 const API_URL = 'https://api.openai.com/v1/chat/completions';
-const MAX_TOKENS = 2000;
-const TEMPERATURE = 0.3;
+const MAX_COMPLETION_TOKENS = 2000;
 
 function translate(text, from, to) {
     console.log('Start translate (OpenAI):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -22,11 +21,11 @@ function translate(text, from, to) {
 
     const requestBody = {
         model: MODEL,
-        temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
+        reasoning_effort: 'none',
+        max_completion_tokens: MAX_COMPLETION_TOKENS,
         messages: [
             {
-                role: 'system',
+                role: 'developer',
                 content: systemPrompt
             },
             {
@@ -64,12 +63,15 @@ function translate(text, from, to) {
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
             const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (OpenAI):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from OpenAI API:', data);
-            proxy.setFailed('Unexpected response from OpenAI API');
+            if (translatedText) {
+                console.log('Translated text (OpenAI):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from OpenAI API:', data);
+        proxy.setFailed('Unexpected response from OpenAI API');
     })
     .catch(error => {
         console.error('Error fetching from OpenAI API:', error);

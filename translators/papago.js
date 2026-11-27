@@ -38,7 +38,7 @@ function checkFinished() {
 function translate(text, from, to) {
     console.log('Start translate (Papago Web):', text, 'from:', from, 'to:', to);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -55,8 +55,6 @@ function translate(text, from, to) {
         return;
     }
 
-    lastText = getText();
-    active = true;
     let targetLang = to;
     let srcLang = (from && from !== 'auto') ? from : 'auto';
     let langs = '?sk=' + srcLang + '&tk=' + targetLang + '&';
@@ -65,6 +63,8 @@ function translate(text, from, to) {
         && window.location.href.indexOf(langs) !== -1) {
         var input = document.querySelector('textarea#txtSource') || document.querySelector('.source_area textarea');
         if (input) {
+            lastText = getText();
+            active = true;
             if (input.value === text) {
                 console.log('using cached result');
                 lastText = '';
@@ -76,6 +76,8 @@ function translate(text, from, to) {
         }
     }
 
+    active = false;
+    lastText = '';
     let url = 'https://papago.naver.com/?sk=' + srcLang + '&tk=' + targetLang + '&st=' + encodeURIComponent(text);
     console.log("setting url", url);
     window.location = url;

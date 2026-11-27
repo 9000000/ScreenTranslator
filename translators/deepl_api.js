@@ -2,18 +2,19 @@ const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your DeepL API key (Free: e
 
 function mapDeepLLang(lang, isTarget) {
     if (!lang) return '';
-    let code = lang.toUpperCase();
+    const code = lang.toUpperCase();
     if (code === 'ZH-CN' || code === 'ZH') return isTarget ? 'ZH-HANS' : 'ZH';
     if (code === 'ZH-TW') return isTarget ? 'ZH-HANT' : 'ZH';
     if (code === 'EN' && isTarget) return 'EN-US';
     if (code === 'PT' && isTarget) return 'PT-PT';
+    if (code === 'NO') return 'NB';
     return code;
 }
 
 function translate(text, from, to) {
     console.log('Start translate (DeepL API):', text, 'from:', from, 'to:', to);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -69,12 +70,15 @@ function translate(text, from, to) {
 
         if (data.translations && data.translations.length > 0) {
             const translatedText = data.translations.map(t => t.text).join('\n').trim();
-            console.log('Translated text (DeepL API):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from DeepL API:', data);
-            proxy.setFailed('Unexpected response from DeepL API');
+            if (translatedText) {
+                console.log('Translated text (DeepL API):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from DeepL API:', data);
+        proxy.setFailed('Unexpected response from DeepL API');
     })
     .catch(error => {
         console.error('Error fetching from DeepL API:', error);

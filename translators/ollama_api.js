@@ -1,11 +1,15 @@
 const OLLAMA_HOST = 'http://localhost:11434'; // Default Ollama server address
-const MODEL = 'llama3.2'; // Any model installed in your Ollama (e.g. llama3.2, qwen2.5, gemma2, mistral)
+const MODEL = 'llama3.2'; // Any model installed in your Ollama (e.g. llama3.2, qwen3, gemma4, gemma3, deepseek-r1)
 const TEMPERATURE = 0.3;
+
+function stripThinking(text) {
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
 
 function translate(text, from, to) {
     console.log('Start translate (Ollama Local):', text, 'from:', from, 'to:', to, 'using model:', MODEL);
 
-    if (text.trim().length === 0) {
+    if (!text || text.trim().length === 0) {
         proxy.setTranslated('');
         return;
     }
@@ -56,13 +60,16 @@ function translate(text, from, to) {
         if (!data) return;
 
         if (data.choices && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-            const translatedText = data.choices[0].message.content.trim();
-            console.log('Translated text (Ollama):', translatedText);
-            proxy.setTranslated(translatedText);
-        } else {
-            console.error('Unexpected response from Ollama:', data);
-            proxy.setFailed('Unexpected response from Ollama');
+            const translatedText = stripThinking(data.choices[0].message.content);
+            if (translatedText) {
+                console.log('Translated text (Ollama):', translatedText);
+                proxy.setTranslated(translatedText);
+                return;
+            }
         }
+
+        console.error('Unexpected response from Ollama:', data);
+        proxy.setFailed('Unexpected response from Ollama');
     })
     .catch(error => {
         console.error('Error connecting to Ollama:', error);
