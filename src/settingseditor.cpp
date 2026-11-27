@@ -223,7 +223,7 @@ public:
           }
           if (event->type() == QEvent::MouseButtonRelease) {
             const bool clicked = (pressedIndex_ == index);
-            pressedIndex_ = {};
+            pressedIndex_ = QPersistentModelIndex();
             if (clicked && onConfigure_) {
               const auto scriptName = index.data(Qt::DisplayRole).toString();
               QTimer::singleShot(0, this, [cb = onConfigure_, scriptName] {
@@ -236,7 +236,7 @@ public:
         }
         if (event->type() == QEvent::MouseButtonRelease &&
             pressedIndex_.isValid()) {
-          pressedIndex_ = {};
+          pressedIndex_ = QPersistentModelIndex();
         }
       }
     }
