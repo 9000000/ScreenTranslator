@@ -831,28 +831,43 @@ bool Installer::extractArchive(const QByteArray &zipData,
     return false;
   }
 
-  // Detect whether all entries share a single top-level folder (e.g. "ScreenTranslator/")
+  // Validate raw entries first and detect if all files share a single safe top-level folder
   QString commonPrefix;
   bool hasCommonPrefix = true;
   for (auto i = 0u; i < fileCount; ++i) {
     mz_zip_archive_file_stat st;
-    if (!mz_zip_reader_file_stat(&zip, i, &st))
-      continue;
-    if (st.m_is_directory)
-      continue;
+    if (!mz_zip_reader_file_stat(&zip, i, &st)) {
+      error_ += QApplication::translate("Updates", "Failed to read zip entry");
+      return false;
+    }
     auto entry = QString::fromUtf8(st.m_filename).replace(QLatin1Char('\\'),
                                                           QLatin1Char('/'));
+    if (entry.startsWith(QLatin1Char('/')) || entry.contains(QLatin1Char(':')) ||
+        entry.split(QLatin1Char('/'), Qt::SkipEmptyParts)
+            .contains(QStringLiteral(".."))) {
+      error_ +=
+          QApplication::translate("Updates", "Unsafe archive entry\n%1")
+              .arg(entry);
+      return false;
+    }
+    if (st.m_is_directory)
+      continue;
+    if (!hasCommonPrefix)
+      continue;
     const int slash = entry.indexOf(QLatin1Char('/'));
     if (slash <= 0) {
       hasCommonPrefix = false;
-      break;
+      continue;
     }
     const auto top = entry.left(slash + 1);
+    if (top == QLatin1String("./") || top == QLatin1String("../")) {
+      hasCommonPrefix = false;
+      continue;
+    }
     if (commonPrefix.isEmpty())
       commonPrefix = top;
     else if (commonPrefix != top) {
       hasCommonPrefix = false;
-      break;
     }
   }
   if (!hasCommonPrefix)
