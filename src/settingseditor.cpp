@@ -8,10 +8,27 @@
 #include "updates.h"
 #include "widgetstate.h"
 
+#include <QApplication>
+#include <QCheckBox>
 #include <QColorDialog>
+#include <QDialogButtonBox>
+#include <QFile>
+#include <QFormLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QMouseEvent>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QStandardItemModel>
+#include <QStyleOptionButton>
+#include <QStyledItemDelegate>
+#include <QTimer>
+#include <QVBoxLayout>
+
+#include <algorithm>
+#include <functional>
 
 namespace
 {
@@ -26,6 +43,222 @@ enum class Page {  // order must match ui->pagesView
   Count
 };
 enum class PageColumn { Name, Description, Error, Count };
+
+constexpr int kHasConfigRole = Qt::UserRole + 1;
+constexpr int kButtonLabelRole = Qt::UserRole + 2;
+
+struct ScriptField {
+  bool present{false};
+  QString value;
+  QString comment;
+};
+
+struct TranslatorConfig {
+  ScriptField apiKey;
+  ScriptField model;
+  ScriptField ollamaHost;
+  ScriptField apiUrl;
+
+  bool isConfigurable() const { return apiKey.present || ollamaHost.present; }
+};
+
+QRegularExpression fieldRegex(const QString &varName)
+{
+  return QRegularExpression(
+      QStringLiteral(
+          R"(^([ \t]*(?:const|let|var)[ \t]+%1[ \t]*=[ \t]*)(['"])((?:\\.|(?!\2).)*)(\2)([ \t]*;[ \t]*)(.*)$)")
+          .arg(varName),
+      QRegularExpression::MultilineOption);
+}
+
+QString unescapeJsString(const QString &raw, QChar quote)
+{
+  QString out;
+  out.reserve(raw.size());
+  for (int i = 0; i < raw.size(); ++i) {
+    if (raw[i] == QLatin1Char('\\') && i + 1 < raw.size()) {
+      const auto next = raw[i + 1];
+      if (next == quote || next == QLatin1Char('\\')) {
+        out.append(next);
+        ++i;
+        continue;
+      }
+    }
+    out.append(raw[i]);
+  }
+  return out;
+}
+
+QString escapeJsString(const QString &val, QChar quote)
+{
+  QString out;
+  out.reserve(val.size());
+  for (const auto ch : val) {
+    if (ch == QLatin1Char('\\') || ch == quote)
+      out.append(QLatin1Char('\\'));
+    out.append(ch);
+  }
+  return out;
+}
+
+ScriptField readScriptField(const QString &content, const QString &varName)
+{
+  ScriptField field;
+  const auto match = fieldRegex(varName).match(content);
+  if (!match.hasMatch())
+    return field;
+
+  field.present = true;
+  const auto quote = match.captured(2).at(0);
+  field.value = unescapeJsString(match.captured(3), quote);
+  auto comment = match.captured(6).trimmed();
+  if (comment.startsWith(QLatin1String("//")))
+    comment = comment.mid(2).trimmed();
+  field.comment = comment;
+  return field;
+}
+
+bool updateScriptField(QString &content, const QString &varName,
+                       const QString &newValue)
+{
+  const auto re = fieldRegex(varName);
+  const auto match = re.match(content);
+  if (!match.hasMatch())
+    return false;
+
+  const auto quote = match.captured(2).at(0);
+  const auto replacement = match.captured(1) + match.captured(2) +
+                           escapeJsString(newValue, quote) + match.captured(4) +
+                           match.captured(5) + match.captured(6);
+  content.replace(match.capturedStart(0), match.capturedLength(0), replacement);
+  return true;
+}
+
+bool isPlaceholderApiKey(const QString &key)
+{
+  const auto trimmed = key.trimmed();
+  return trimmed.isEmpty() || trimmed == QLatin1String("YOUR_API_KEY_HERE") ||
+         trimmed == QLatin1String("YOUR_TOKEN_HERE");
+}
+
+TranslatorConfig parseTranslatorConfig(const QString &filePath)
+{
+  TranslatorConfig cfg;
+  QFile file(filePath);
+  if (!file.open(QFile::ReadOnly))
+    return cfg;
+
+  const auto content = QString::fromUtf8(file.readAll());
+  cfg.apiKey = readScriptField(content, QStringLiteral("API_KEY"));
+  cfg.model = readScriptField(content, QStringLiteral("MODEL"));
+  cfg.ollamaHost = readScriptField(content, QStringLiteral("OLLAMA_HOST"));
+  cfg.apiUrl = readScriptField(content, QStringLiteral("API_URL"));
+  return cfg;
+}
+
+QString extractFirstUrl(const QString &text)
+{
+  static const QRegularExpression urlRe(QStringLiteral(R"(https?://[^\s)]+)"));
+  const auto match = urlRe.match(text);
+  return match.hasMatch() ? match.captured(0) : QString();
+}
+
+class TranslatorItemDelegate : public QStyledItemDelegate
+{
+public:
+  using Callback = std::function<void(const QString &)>;
+
+  explicit TranslatorItemDelegate(Callback onConfigure,
+                                  QObject *parent = nullptr)
+    : QStyledItemDelegate(parent)
+    , onConfigure_(std::move(onConfigure))
+  {
+  }
+
+  void paint(QPainter *painter, const QStyleOptionViewItem &option,
+             const QModelIndex &index) const override
+  {
+    QStyledItemDelegate::paint(painter, option, index);
+    if (!index.data(kHasConfigRole).toBool())
+      return;
+
+    const auto label = index.data(kButtonLabelRole).toString();
+    QStyleOptionButton btn;
+    btn.rect = buttonRect(option, label);
+    btn.text = label;
+    btn.state = QStyle::State_Enabled;
+    if (!(option.state & QStyle::State_Enabled))
+      btn.state &= ~QStyle::State_Enabled;
+    btn.state |=
+        (pressedIndex_ == index) ? QStyle::State_Sunken : QStyle::State_Raised;
+
+    QApplication::style()->drawControl(QStyle::CE_PushButton, &btn, painter);
+  }
+
+  QSize sizeHint(const QStyleOptionViewItem &option,
+                 const QModelIndex &index) const override
+  {
+    auto sz = QStyledItemDelegate::sizeHint(option, index);
+    sz.setHeight(std::max(sz.height(), option.fontMetrics.height() + 10));
+    return sz;
+  }
+
+  bool editorEvent(QEvent *event, QAbstractItemModel *model,
+                   const QStyleOptionViewItem &option,
+                   const QModelIndex &index) override
+  {
+    if (index.data(kHasConfigRole).toBool() &&
+        (event->type() == QEvent::MouseButtonPress ||
+         event->type() == QEvent::MouseButtonRelease ||
+         event->type() == QEvent::MouseButtonDblClick)) {
+      const auto *mouseEvent = static_cast<QMouseEvent *>(event);
+      if (mouseEvent->button() == Qt::LeftButton) {
+        const auto label = index.data(kButtonLabelRole).toString();
+        const auto rect = buttonRect(option, label);
+        if (rect.contains(mouseEvent->pos())) {
+          if (event->type() == QEvent::MouseButtonPress) {
+            pressedIndex_ = index;
+            return true;
+          }
+          if (event->type() == QEvent::MouseButtonRelease) {
+            const bool clicked = (pressedIndex_ == index);
+            pressedIndex_ = {};
+            if (clicked && onConfigure_) {
+              const auto scriptName = index.data(Qt::DisplayRole).toString();
+              QTimer::singleShot(0, this, [cb = onConfigure_, scriptName] {
+                cb(scriptName);
+              });
+            }
+            return true;
+          }
+          return true;
+        }
+        if (event->type() == QEvent::MouseButtonRelease &&
+            pressedIndex_.isValid()) {
+          pressedIndex_ = {};
+        }
+      }
+    }
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
+  }
+
+private:
+  static QRect buttonRect(const QStyleOptionViewItem &option,
+                          const QString &label)
+  {
+    const int marginRight = 6;
+    const int paddingV = 2;
+    const int width =
+        std::max(96, option.fontMetrics.boundingRect(label).width() + 24);
+    const int height = std::max(18, option.rect.height() - paddingV * 2);
+    const int x = option.rect.right() - width - marginRight;
+    const int y = option.rect.top() + (option.rect.height() - height) / 2;
+    return QRect(x, y, width, height);
+  }
+
+  Callback onConfigure_;
+  mutable QPersistentModelIndex pressedIndex_;
+};
 }  // namespace
 
 SettingsEditor::SettingsEditor(Manager &manager, update::Updater &updater)
@@ -153,6 +386,9 @@ SettingsEditor::SettingsEditor(Manager &manager, update::Updater &updater)
          "visible. You can make it using the \"Show translator\" entry "
          "in the tray icon's context menu</b>"));
   ui->translateLangCombo->setModel(models_.targetLanguageModel());
+  ui->translatorList->setItemDelegate(new TranslatorItemDelegate(
+      [this](const QString &scriptName) { configureTranslator(scriptName); },
+      ui->translatorList));
 
   // representation
   ui->fontColor->setAutoFillBackground(true);
@@ -459,11 +695,153 @@ void SettingsEditor::updateTranslators(const QStringList &translators)
   all.removeDuplicates();
   ui->translatorList->addItems(all);
 
+  const auto dir = ui->translatorsPath->text();
   for (auto i = 0, end = ui->translatorList->count(); i < end; ++i) {
     auto item = ui->translatorList->item(i);
     item->setCheckState(translators.contains(item->text()) ? Qt::Checked
                                                            : Qt::Unchecked);
+
+    const auto cfg =
+        parseTranslatorConfig(dir + QLatin1Char('/') + item->text());
+    item->setData(kHasConfigRole, cfg.isConfigurable());
+    if (cfg.isConfigurable()) {
+      QString label;
+      if (cfg.apiKey.present) {
+        label = isPlaceholderApiKey(cfg.apiKey.value) ? tr("API Key...")
+                                                      : tr("API Key (set)");
+      } else {
+        label = tr("Configure...");
+      }
+      item->setData(kButtonLabelRole, label);
+    }
   }
+}
+
+void SettingsEditor::configureTranslator(const QString &scriptName)
+{
+  const auto filePath =
+      ui->translatorsPath->text() + QLatin1Char('/') + scriptName;
+  QFile file(filePath);
+  if (!file.open(QFile::ReadOnly)) {
+    QMessageBox::warning(
+        this, tr("Translator Settings"),
+        tr("Cannot open translator script:\n%1").arg(filePath));
+    return;
+  }
+
+  auto content = QString::fromUtf8(file.readAll());
+  file.close();
+
+  const auto apiKeyField = readScriptField(content, QStringLiteral("API_KEY"));
+  const auto modelField = readScriptField(content, QStringLiteral("MODEL"));
+  const auto hostField =
+      readScriptField(content, QStringLiteral("OLLAMA_HOST"));
+  const auto urlField = readScriptField(content, QStringLiteral("API_URL"));
+
+  if (!apiKeyField.present && !hostField.present)
+    return;
+
+  QDialog dialog(this);
+  dialog.setWindowTitle(tr("Configure %1").arg(scriptName));
+  dialog.setMinimumWidth(460);
+
+  auto *mainLayout = new QVBoxLayout(&dialog);
+  auto *formLayout = new QFormLayout;
+  mainLayout->addLayout(formLayout);
+
+  QLineEdit *apiKeyEdit = nullptr;
+  if (apiKeyField.present) {
+    apiKeyEdit = new QLineEdit(&dialog);
+    apiKeyEdit->setEchoMode(QLineEdit::Password);
+    apiKeyEdit->setPlaceholderText(tr("Enter API key..."));
+    if (!isPlaceholderApiKey(apiKeyField.value))
+      apiKeyEdit->setText(apiKeyField.value);
+
+    auto *showKeyCheck = new QCheckBox(tr("Show"), &dialog);
+    connect(showKeyCheck, &QCheckBox::toggled, apiKeyEdit,
+            [apiKeyEdit](bool checked) {
+              apiKeyEdit->setEchoMode(checked ? QLineEdit::Normal
+                                              : QLineEdit::Password);
+            });
+
+    auto *keyRow = new QHBoxLayout;
+    keyRow->setContentsMargins(0, 0, 0, 0);
+    keyRow->addWidget(apiKeyEdit);
+    keyRow->addWidget(showKeyCheck);
+    formLayout->addRow(tr("API Key:"), keyRow);
+
+    const auto keyUrl = extractFirstUrl(apiKeyField.comment);
+    if (!keyUrl.isEmpty()) {
+      auto *linkLabel = new QLabel(
+          QStringLiteral("<a href=\"%1\">%2</a>").arg(keyUrl, keyUrl), &dialog);
+      linkLabel->setOpenExternalLinks(true);
+      formLayout->addRow(QString(), linkLabel);
+    }
+  }
+
+  QLineEdit *hostEdit = nullptr;
+  if (hostField.present) {
+    hostEdit = new QLineEdit(hostField.value, &dialog);
+    formLayout->addRow(tr("Host URL:"), hostEdit);
+  }
+
+  QLineEdit *modelEdit = nullptr;
+  if (modelField.present) {
+    modelEdit = new QLineEdit(modelField.value, &dialog);
+    formLayout->addRow(tr("Model:"), modelEdit);
+    if (!modelField.comment.isEmpty()) {
+      auto *hintLabel = new QLabel(modelField.comment, &dialog);
+      hintLabel->setWordWrap(true);
+      hintLabel->setStyleSheet(QStringLiteral("color: gray; font-size: 11px;"));
+      formLayout->addRow(QString(), hintLabel);
+    }
+  }
+
+  QLineEdit *urlEdit = nullptr;
+  if (urlField.present) {
+    urlEdit = new QLineEdit(urlField.value, &dialog);
+    formLayout->addRow(tr("API URL:"), urlEdit);
+  }
+
+  auto *buttons = new QDialogButtonBox(
+      QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+  connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+  connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+  mainLayout->addWidget(buttons);
+
+  if (dialog.exec() != QDialog::Accepted)
+    return;
+
+  if (apiKeyEdit) {
+    const auto trimmedKey = apiKeyEdit->text().trimmed();
+    updateScriptField(
+        content, QStringLiteral("API_KEY"),
+        trimmedKey.isEmpty() ? QStringLiteral("YOUR_API_KEY_HERE")
+                             : trimmedKey);
+  }
+  if (hostEdit && !hostEdit->text().trimmed().isEmpty()) {
+    updateScriptField(content, QStringLiteral("OLLAMA_HOST"),
+                      hostEdit->text().trimmed());
+  }
+  if (modelEdit && !modelEdit->text().trimmed().isEmpty()) {
+    updateScriptField(content, QStringLiteral("MODEL"),
+                      modelEdit->text().trimmed());
+  }
+  if (urlEdit && !urlEdit->text().trimmed().isEmpty()) {
+    updateScriptField(content, QStringLiteral("API_URL"),
+                      urlEdit->text().trimmed());
+  }
+
+  if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
+    QMessageBox::warning(
+        this, tr("Translator Settings"),
+        tr("Cannot save translator script:\n%1").arg(filePath));
+    return;
+  }
+  file.write(content.toUtf8());
+  file.close();
+
+  updateTranslators(enabledTranslators());
 }
 
 void SettingsEditor::handleButtonBoxClicked(QAbstractButton *button)

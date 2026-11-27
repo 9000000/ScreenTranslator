@@ -34,6 +34,7 @@ private:
   void updateCurrentPage();
   void updateTesseractLanguages(const QString &sourceLanguage);
   void updateTranslators(const QStringList &translators);
+  void configureTranslator(const QString &scriptName);
   void updateModels();
   void validateSettings();
 
